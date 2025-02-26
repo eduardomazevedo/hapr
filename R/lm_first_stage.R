@@ -7,7 +7,7 @@
 #' @details
 #' Fits the HARP model given the outcome y, PRS gc, and control variables w. This returns
 #' a first stage fit, which does not need to assume an improvement ratio. Run
-#' extrapolate(first_stage_fit) to specify an improvement ratio and get the full model.
+#' hapr_lm_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
 #' @export
 hapr_lm_first_stage <- function(y, gc, w) {
   # Preprocess inputs

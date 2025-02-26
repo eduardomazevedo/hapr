@@ -1,3 +1,19 @@
+#' Regress binary y on gc and w using probit regression
+#' @param y Binary outcome variable (factor)
+#' @param gc Polygenic risk score (normalized)
+#' @param w Control variables data frame
+#' @return A list containing:
+#'   \item{gamma}{Regression coefficients}
+#'   \item{se_gamma}{Standard errors of coefficients}
+#'   \item{vcov_gamma}{Variance-covariance matrix}
+#'   \item{r2_gc_and_w}{Liability R² for y ~ gc + w}
+#'   \item{r2_gc}{Liability R² for y ~ gc}
+#'   \item{var_error_y_on_gc_and_w}{Residual variance}
+#' @details
+#' This function fits a probit regression model of y on gc and w and returns the coefficients,
+#' standard errors, variance-covariance matrix, liability R² values, and residual variance.
+#' Used in the first stage of hapr_probit.
+#' @noRd
 feasible_regression_probit <- function(y, gc, w) {
   # Combine gc with w into a data frame
   df <- data.frame(y = y, gc = gc, w)

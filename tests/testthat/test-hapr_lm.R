@@ -32,13 +32,13 @@ test_that("hapr_lm estimates coefficients correctly", {
   beta <- fit$beta
 
   # Check expected values
-  expect_true(abs(beta[['gc']] - 0.42) < 0.05, 
+  expect_true(abs(beta[['gf']] - 0.42) < 0.05, 
               sprintf("Beta[gc] = %.3f is not close to 0.42", beta[['gc']]))
   expect_true(abs(beta[['w1']] - 0.17) < 0.05,
               sprintf("Beta[w1] = %.3f is not close to 0.17", beta[['w1']]))
   
   # Check remaining coefficients are close to zero
-  remaining_betas <- setdiff(names(beta), c("gc", "w1"))
+  remaining_betas <- setdiff(names(beta), c("gf", "w1"))
   for (param in remaining_betas) {
     expect_true(abs(beta[[param]]) < 0.05, 
                 sprintf("Beta[%s] = %.3f is not close to zero", param, beta[[param]]))

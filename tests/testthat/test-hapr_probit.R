@@ -30,7 +30,7 @@ test_that("hapr_probit returns expected coefficients", {
   full_fit <- hapr_probit(y_binary, gc_normalized, w, improvement_ratio = 1.5)
   
   # Test that coefficients are as expected
-  expect_equal(full_fit$beta[['gc']], 0.42, tolerance = 0.1)
+  expect_equal(full_fit$beta[['gf']], 0.42, tolerance = 0.1)
   expect_equal(full_fit$beta[['w1']], 0.17, tolerance = 0.1)
   expect_equal(full_fit$beta[['w2B']], 0, tolerance = 0.1)
 })

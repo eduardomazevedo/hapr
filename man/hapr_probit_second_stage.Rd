@@ -2,7 +2,7 @@
 % Please edit documentation in R/probit_second_stage.R
 \name{hapr_probit_second_stage}
 \alias{hapr_probit_second_stage}
-\title{Extrapolate HAPR results given future R-squared to get full fit: probit model.}
+\title{HAPR probit model second stage fit}
 \usage{
 hapr_probit_second_stage(
   first_stage,
@@ -22,7 +22,7 @@ hapr_probit_second_stage(
 \item{r2_future}{The R-squared of the future fit}
 }
 \value{
-A hapr_probit_full_fit object containing the results of the second stage
+A hapr_probit_fit object containing the results of the second stage
 }
 \description{
 After fitting the first stage, we can specify an improvement ratio to estimate

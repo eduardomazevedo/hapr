@@ -2,7 +2,7 @@
 % Please edit documentation in R/probit_first_stage.R
 \name{hapr_probit_first_stage}
 \alias{hapr_probit_first_stage}
-\title{Heritability adjusted prediction for probit models}
+\title{HAPR probit model first stage fit}
 \usage{
 hapr_probit_first_stage(y, gc, w)
 }
@@ -17,10 +17,10 @@ hapr_probit_first_stage(y, gc, w)
 A hapr_probit_first_stage_fit object containing the results of the first stage.
 }
 \description{
-Heritability adjusted prediction for probit models
+HAPR probit model first stage fit
 }
 \details{
-Fits the HARP model given the outcome y, PRS gc, and control variables w. This returns a first stage fit,
-which does not need to assume an improvement ratio. Run extrapolate(first_stage_fit) to specify an improvement ratio and
-get the full model.
+Fits the HARP model given the outcome y, PRS gc, and control variables w. This returns
+a first stage fit, which does not need to assume an improvement ratio. Run
+hapr_probit_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
 }

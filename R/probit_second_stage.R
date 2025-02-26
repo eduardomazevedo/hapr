@@ -1,4 +1,4 @@
-#' Extrapolate HAPR results given future R-squared to get full fit: probit model.
+#' HAPR probit model second stage fit
 #'
 #' After fitting the first stage, we can specify an improvement ratio to estimate 
 #' the full model. Alternatively, we can specify the R-squared of the future fit 
@@ -10,7 +10,7 @@
 #' @param improvement_ratio The ratio to extrapolate by
 #' @param r2_current The R-squared of the current fit
 #' @param r2_future The R-squared of the future fit
-#' @return A hapr_probit_full_fit object containing the results of the second stage
+#' @return A hapr_probit_fit object containing the results of the second stage
 #' @export
 hapr_probit_second_stage <- function(
   first_stage,
@@ -85,6 +85,8 @@ hapr_probit_second_stage <- function(
     gamma[i_other] * sqrt(1 + (posterior$c^2) * (beta[i_gc]^2)) - 
     posterior$b * theta * beta[i_gc]
 
+  # Rename gc to gf in beta coefficients
+  names(beta)[i_gc] <- "gf"
 
   # Create the result object
   result <- c(first_stage, list(
