@@ -3,3 +3,6 @@
 export(hapr_lm)
 export(hapr_lm_first_stage)
 export(hapr_lm_second_stage)
+export(hapr_probit)
+export(hapr_probit_first_stage)
+export(hapr_probit_second_stage)
