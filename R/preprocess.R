@@ -1,5 +1,5 @@
 #' Preprocess inputs for HAPR models
-#' 
+#'
 #' @param y Outcome variable. For linear models, must be numeric. For probit models,
 #'   must be numeric, logical, or factor with exactly 2 levels. For cox models,
 #'   must be a Surv object compatible with survival::coxph().
@@ -56,8 +56,11 @@ preprocess <- function(y, gc, w, model_type) {
   }
 
   # Scale gc and make sure it is numeric
-  gc <- gc |> as.numeric() |> scale() |> as.numeric()
-  
+  gc <- gc |>
+    as.numeric() |>
+    scale() |>
+    as.numeric()
+
   # Ensure w is a data frame
   if (!is.data.frame(w)) {
     stop("w must be a data frame.")

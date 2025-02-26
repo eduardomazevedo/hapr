@@ -1,5 +1,5 @@
 #' Heritability adjusted prediction for probit models
-#' 
+#'
 #' Fits the HARP model given the outcome y, PRS gc, and control variables w.
 #' This is a convenience function that combines the first and second stage fits.
 #'

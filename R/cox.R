@@ -1,5 +1,5 @@
 #' Heritability adjusted prediction for the Cox proportional hazards model
-#' 
+#'
 #' Fits the HARP model given the outcome y, PRS gc, and control variables w.
 #'
 #' @param y Outcome variable: a Surv object compatible with survival::coxph()

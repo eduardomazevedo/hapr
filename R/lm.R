@@ -1,5 +1,5 @@
 #' Heritability adjusted prediction for linear models
-#' 
+#'
 #' Fits the HARP model given the outcome y, PRS gc, and control variables w.
 #'
 #' @param y Outcome variable

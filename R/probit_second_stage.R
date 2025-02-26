@@ -1,9 +1,9 @@
 #' HAPR probit model second stage fit
 #'
-#' After fitting the first stage, we can specify an improvement ratio to estimate 
-#' the full model. Alternatively, we can specify the R-squared of the future fit 
-#' to estimate the improvement ratio. If specifying the r2_future, you can also 
-#' specify the r2_current to estimate the improvement ratio. Otherwise, the 
+#' After fitting the first stage, we can specify an improvement ratio to estimate
+#' the full model. Alternatively, we can specify the R-squared of the future fit
+#' to estimate the improvement ratio. If specifying the r2_future, you can also
+#' specify the r2_current to estimate the improvement ratio. Otherwise, the
 #' r2_current is extracted from the data in the first stage fit.
 #'
 #' @param first_stage A hapr_probit_first_stage_fit object
@@ -13,12 +13,11 @@
 #' @return A hapr_probit_fit object containing the results of the second stage
 #' @export
 hapr_probit_second_stage <- function(
-  first_stage,
-  improvement_ratio = NULL,
-  r2_current = NULL,
-  r2_future = NULL,
-  ...
-) {
+    first_stage,
+    improvement_ratio = NULL,
+    r2_current = NULL,
+    r2_future = NULL,
+    ...) {
   # Make sure first_stage is a hapr_lm_first_stage_fit object
   if (!inherits(first_stage, "hapr_probit_first_stage_fit")) {
     stop("first_stage must be a hapr_probit_first_stage_fit object.")
@@ -64,8 +63,8 @@ hapr_probit_second_stage <- function(
   gamma <- first_stage$gamma
   theta <- first_stage$theta
   beta <- gamma
-  i_gc <- which(names(gamma) == 'gc')
-  i_other <- which(names(gamma) != 'gc')
+  i_gc <- which(names(gamma) == "gc")
+  i_other <- which(names(gamma) != "gc")
 
   sqrt_input <- posterior$a^2 - (gamma[i_gc]^2) * (posterior$c^2)
   if (sqrt_input < 0) {
@@ -73,7 +72,7 @@ hapr_probit_second_stage <- function(
     message(sprintf(
       "a = %f\ngamma_gc = %f\nc = %f\nsqrt_input = a^2 - (gamma_gc^2 * c^2) = %f",
       posterior$a,
-      gamma[i_gc], 
+      gamma[i_gc],
       posterior$c,
       sqrt_input
     ))
@@ -82,7 +81,7 @@ hapr_probit_second_stage <- function(
   beta[i_gc] <-
     gamma[i_gc] / sqrt(sqrt_input)
   beta[i_other] <-
-    gamma[i_other] * sqrt(1 + (posterior$c^2) * (beta[i_gc]^2)) - 
+    gamma[i_other] * sqrt(1 + (posterior$c^2) * (beta[i_gc]^2)) -
     posterior$b * theta * beta[i_gc]
 
   # Rename gc to gf in beta coefficients

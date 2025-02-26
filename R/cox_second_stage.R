@@ -1,9 +1,9 @@
 #' HAPR Cox proportional hazards model second stage fit
 #'
-#' After fitting the first stage, we can specify an improvement ratio to estimate 
-#' the full model. Alternatively, we can specify the R-squared of the future fit 
-#' to estimate the improvement ratio. If specifying the r2_future, you can also 
-#' specify the r2_current to estimate the improvement ratio. Otherwise, the 
+#' After fitting the first stage, we can specify an improvement ratio to estimate
+#' the full model. Alternatively, we can specify the R-squared of the future fit
+#' to estimate the improvement ratio. If specifying the r2_future, you can also
+#' specify the r2_current to estimate the improvement ratio. Otherwise, the
 #' r2_current is extracted from the data in the first stage fit.
 #'
 #' @param first_stage A hapr_cox_first_stage_fit object
@@ -13,11 +13,10 @@
 #' @return A hapr_cox_fit object containing the results of the second stage
 #' @export
 hapr_cox_second_stage <- function(
-  first_stage,
-  improvement_ratio = NULL,
-  r2_current = NULL,
-  r2_future = NULL
-) {
+    first_stage,
+    improvement_ratio = NULL,
+    r2_current = NULL,
+    r2_future = NULL) {
   # Make sure first_stage is a hapr_cox_first_stage_fit object
   if (!inherits(first_stage, "hapr_cox_first_stage_fit")) {
     stop("first_stage must be a hapr_cox_first_stage_fit object.")
@@ -56,8 +55,8 @@ hapr_cox_second_stage <- function(
   theta <- first_stage$theta
   theta_without_intercept <- theta[-1]
   beta <- gamma
-  i_gc <- which(names(gamma) == 'gc')
-  i_other <- which(names(gamma) != 'gc')
+  i_gc <- which(names(gamma) == "gc")
+  i_other <- which(names(gamma) != "gc")
   beta[i_gc] <- gamma[i_gc] / posterior$a
   beta[i_other] <- gamma[i_other] - beta[i_gc] * posterior$b * theta_without_intercept
 
