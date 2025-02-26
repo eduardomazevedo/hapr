@@ -19,8 +19,14 @@ jobs:
         with:
           extra-packages: any::remotes
 
+      - name: Install package
+        run: |
+          remotes::install_local(dependencies = TRUE)
+        shell: Rscript {0}
+
       - name: Run testthat
         run: |
-          install.packages("testthat")
+          library(testthat)
+          library(yourpackagename)  # Replace with your package name
           testthat::test_dir("tests/testthat", reporter = "summary")
         shell: Rscript {0}
