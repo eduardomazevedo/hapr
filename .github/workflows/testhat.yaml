@@ -27,6 +27,6 @@ jobs:
       - name: Run testthat
         run: |
           library(testthat)
-          library(yourpackagename)  # Replace with your package name
+          library(hapr)
           testthat::test_dir("tests/testthat", reporter = "summary")
         shell: Rscript {0}
