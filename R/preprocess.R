@@ -69,5 +69,5 @@ preprocess <- function(y, gc, w, model_type) {
   gc <- gc[complete_cases]
   w <- w[complete_cases, , drop = FALSE]
 
-  return(list(y = y, gc = gc, w = w))
+  list(y = y, gc = gc, w = w)
 }

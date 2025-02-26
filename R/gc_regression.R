@@ -1,4 +1,20 @@
-regress_gc_on_w <- function(gc, w) {
+#' Regress gc on w
+#' @param gc Polygenic risk score (normalized)
+#' @param w Control variables data frame
+#' @return A list containing:
+#'   \item{theta}{Regression coefficients}
+#'   \item{se_theta}{Standard errors of coefficients}
+#'   \item{vcov_theta}{Variance-covariance matrix}
+#'   \item{var_total}{Total variance (var_v + var_epsilon)}
+#'   \item{var_wtheta}{Variance explained by w}
+#'   \item{max_improvement_ratio}{Maximum possible improvement ratio}
+#' @details
+#' This function fits a linear model of gc on w and returns the coefficients,
+#' standard errors, variance-covariance matrix, total variance, variance explained
+#' by w, and maximum possible improvement ratio. Used in the first stage of the
+#' HAPR routines.
+#' @noRd
+gc_regression <- function(gc, w) {
   # Convert inputs into a data frame for readability
   df <- data.frame(gc = gc, w)
 
@@ -34,12 +50,12 @@ regress_gc_on_w <- function(gc, w) {
   max_improvement_ratio <- 1 / (1 - var_total)
 
   # Return results as a list
-  return(list(
+  list(
     theta = theta,
     se_theta = se_theta,
     vcov_theta = vcov_theta,
     var_total = var_total,
     var_wtheta = var_wtheta,
     max_improvement_ratio = max_improvement_ratio
-  ))
+  )
 }

@@ -1,4 +1,20 @@
-regress_lm_y_on_gc_and_w <- function(y, gc, w) {
+#' Regress y on gc and w
+#' @param y Outcome variable
+#' @param gc Polygenic risk score (normalized)
+#' @param w Control variables data frame
+#' @return A list containing:
+#'   \item{gamma}{Regression coefficients}
+#'   \item{se_gamma}{Standard errors of coefficients}
+#'   \item{vcov_gamma}{Variance-covariance matrix}
+#'   \item{r2_gc_and_w}{R² for y ~ gc + w}
+#'   \item{r2_gc}{R² for y ~ gc}
+#'   \item{var_error_y_on_gc_and_w}{Residual variance}
+#' @details
+#' This function fits a linear model of y on gc and w and returns the coefficients,
+#' standard errors, variance-covariance matrix, R² values, and residual variance.
+#' Used in the first stage of hapr_lm.
+#' @noRd
+feasible_regression_lm <- function(y, gc, w) {
   # Combine gc with w into a data frame
   df <- data.frame(y = y, gc = gc, w)
 
@@ -23,12 +39,12 @@ regress_lm_y_on_gc_and_w <- function(y, gc, w) {
   r2_gc <- model_y_on_gc_summary$r.squared
 
   # Return results as a list
-  return(list(
+  list(
     gamma = gamma,
     se_gamma = se_gamma,
     vcov_gamma = vcov_gamma,
     r2_gc_and_w = r2_gc_and_w,
     r2_gc = r2_gc,
     var_error_y_on_gc_and_w = var_error_y_on_gc_and_w
-  ))
+  )
 }

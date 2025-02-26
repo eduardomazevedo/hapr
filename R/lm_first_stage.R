@@ -18,10 +18,10 @@ hapr_lm_first_stage <- function(y, gc, w) {
   rm(preprocessed)
 
   # Get regression results of gc on w
-  gc_w_results <- regress_gc_on_w(gc, w)
+  gc_w_results <- gc_regression(gc, w)
 
   # Regress y on gc and w
-  y_gc_w_results <- regress_lm_y_on_gc_and_w(y, gc, w)
+  y_gc_w_results <- feasible_regression_lm(y, gc, w)
 
   # Compute max_r2_gf
   max_r2_gf_list <- list(
@@ -31,5 +31,5 @@ hapr_lm_first_stage <- function(y, gc, w) {
   # Return
   result <- c(gc_w_results, y_gc_w_results, max_r2_gf_list)
   class(result) <- "hapr_lm_first_stage_fit"
-  return(result)
+  result
 }

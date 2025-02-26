@@ -83,5 +83,5 @@ hapr_lm_second_stage <- function(
   ))
 
   class(result) <- "hapr_lm_fit"
-  return(result)
+  result
 }

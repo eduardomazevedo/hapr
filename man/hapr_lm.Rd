@@ -31,5 +31,4 @@ A hapr_lm_fit object.
 }
 \description{
 Fits the HARP model given the outcome y, PRS gc, and control variables w.
-This is a convenience function that combines the first and second stage fits.
 }

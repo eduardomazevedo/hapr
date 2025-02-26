@@ -47,5 +47,5 @@ r2_liability_probit <- function(model) {
   # Compute liability-scale R^2
   r2_liability <- var_linear_predictor / (var_linear_predictor + 1)
   
-  return(r2_liability)
+  r2_liability
 }
