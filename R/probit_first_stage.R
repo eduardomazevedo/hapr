@@ -24,12 +24,16 @@ hapr_probit_first_stage <- function(y, gc, w) {
   y_gc_w_results <- feasible_regression_probit(y, gc, w)
 
   # Compute max_r2_gf
-  max_r2_gf_list <- list(
+  stats_list <- list(
     max_r2_gf = gc_w_results$max_improvement_ratio * y_gc_w_results$r2_gc
   )
 
   # Return
-  result <- c(gc_w_results, y_gc_w_results, max_r2_gf_list)
+  result <- list(
+    gc_w_results = gc_w_results,
+    y_gc_w_results = y_gc_w_results,
+    first_stage_stats = stats_list
+  )
   class(result) <- "hapr_probit_first_stage_fit"
   result
 }

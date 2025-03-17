@@ -27,12 +27,12 @@ y <- 0.42 * gf + rnorm(n) + 0.17 * w$w1
 
 
 # Call the hapr_lm function
-# fit <- hapr_lm(y, gc_normalized, w, true_improvement_ratio)
+fit <- hapr_lm(y, gc_normalized, w, true_improvement_ratio)
 
 first_stage <- hapr_lm_first_stage(y, gc_normalized, w)
 second_stage <- hapr_lm_second_stage(first_stage, improvement_ratio = true_improvement_ratio)
 
 # Print the results
-# print(fit)
-# print(first_stage)
-# print(second_stage)
+print(fit)
+print(first_stage)
+print(second_stage)

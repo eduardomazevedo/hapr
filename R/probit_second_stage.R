@@ -33,7 +33,7 @@ hapr_probit_second_stage <- function(
 
   # If r2_current is not provided, extract it from first_stage
   if (is.null(r2_current)) {
-    r2_current <- first_stage$r2_gc
+    r2_current <- first_stage$y_gc_w_results$r2_gc
   }
 
   # Compute the missing value
@@ -43,25 +43,25 @@ hapr_probit_second_stage <- function(
     improvement_ratio <- r2_future / r2_current
   }
 
-  if (improvement_ratio >= first_stage$max_improvement_ratio) {
+  if (improvement_ratio >= first_stage$gc_w_results$max_improvement_ratio) {
     stop(
       sprintf(
         "Improvement ratio must be less than %s.",
-        first_stage$max_improvement_ratio
+        first_stage$gc_w_results$max_improvement_ratio
       )
     )
   }
 
   # Var epsilon
   var_epsilon <- 1 - 1 / improvement_ratio
-  var_v <- first_stage$var_total - var_epsilon
+  var_v <- first_stage$gc_w_results$var_v_plus_var_epsilon - var_epsilon
 
   # Calculate a, b, and c
   posterior <- abc(var_epsilon, var_v)
 
   # beta
-  gamma <- first_stage$gamma
-  theta <- first_stage$theta
+  gamma <- first_stage$y_gc_w_results$gamma
+  theta <- first_stage$gc_w_results$theta
   beta <- gamma
   i_gc <- which(names(gamma) == "gc")
   i_other <- which(names(gamma) != "gc")
@@ -88,13 +88,16 @@ hapr_probit_second_stage <- function(
   names(beta)[i_gc] <- "gf"
 
   # Create the result object
-  result <- c(first_stage, list(
-    improvement_ratio = improvement_ratio,
-    r2_current = r2_current,
-    r2_future = r2_future,
-    posterior_parameters = posterior,
-    beta = beta
-  ))
+  result <- list(
+    first_stage = first_stage,
+    second_stage = list(
+      improvement_ratio = improvement_ratio,
+      r2_current = r2_current,
+      r2_future = r2_future,
+      posterior_parameters = posterior,
+      beta = beta
+    )
+  )
 
   class(result) <- "hapr_probit_fit"
   return(result)
