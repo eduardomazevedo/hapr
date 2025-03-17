@@ -29,7 +29,11 @@ hapr_lm_first_stage <- function(y, gc, w) {
   )
 
   # Return
-  result <- c(gc_w_results, y_gc_w_results, max_r2_gf_list)
+  result <- list(
+    gc_w_results = gc_w_results,
+    y_gc_w_results = y_gc_w_results,
+    first_state_stats = max_r2_gf_list
+  )
   class(result) <- "hapr_lm_first_stage_fit"
   result
 }

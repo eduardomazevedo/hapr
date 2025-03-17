@@ -37,6 +37,7 @@ feasible_regression_lm <- function(y, gc, w) {
   model_y_on_gc <- lm(y ~ gc, data = df)
   model_y_on_gc_summary <- summary(model_y_on_gc)
   r2_gc <- model_y_on_gc_summary$r.squared
+  coefficients_y_on_gc <- coef(model_y_on_gc)
 
   # Return results as a list
   list(
@@ -45,6 +46,7 @@ feasible_regression_lm <- function(y, gc, w) {
     vcov_gamma = vcov_gamma,
     r2_gc_and_w = r2_gc_and_w,
     r2_gc = r2_gc,
-    var_error_y_on_gc_and_w = var_error_y_on_gc_and_w
+    var_error_y_on_gc_and_w = var_error_y_on_gc_and_w,
+    coefficients_y_on_gc = coefficients_y_on_gc
   )
 }

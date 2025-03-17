@@ -28,33 +28,33 @@ gc_regression <- function(gc, w) {
 
   # Extract unexplained variance (residual variance)
   var_residual <- sigma(model_gc)^2
-  var_total <- var_residual # This is var_v + var_epsilon that gets saved
+  var_v_plus_var_epsilon <- var_residual # This is var_v + var_epsilon that gets saved
 
   # Compute explained variance (R² equivalent)
   var_wtheta <- var(fitted(model_gc))
 
-  # Dearling with numerical issues
+  # Dealing with numerical issues
   # Normalize variances to sum to 1 if needed
   var_sum <- var_residual + var_wtheta
   if (var_sum > 0) {
-    var_total <- var_residual / var_sum
+    var_v_plus_var_epsilon <- var_residual / var_sum
     var_wtheta <- var_wtheta / var_sum
   } else {
     warning("Total variance sum is zero or negative. Check inputs.")
-    var_total <- NA
+    var_v_plus_var_epsilon <- NA
     var_wtheta <- NA
   }
 
 
   # Compute maximum improvement ratio
-  max_improvement_ratio <- 1 / (1 - var_total)
+  max_improvement_ratio <- 1 / (1 - var_v_plus_var_epsilon)
 
   # Return results as a list
   list(
     theta = theta,
     se_theta = se_theta,
     vcov_theta = vcov_theta,
-    var_total = var_total,
+    var_v_plus_var_epsilon = var_v_plus_var_epsilon,
     var_wtheta = var_wtheta,
     max_improvement_ratio = max_improvement_ratio
   )
