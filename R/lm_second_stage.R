@@ -83,10 +83,12 @@ hapr_lm_second_stage <- function(
       r2_future = r2_future,
       posterior_parameters = posterior,
       beta = beta,
-      var_eta = var_eta
+      var_eta = var_eta,
+      var_v = var_v,
+      var_epsilon = var_epsilon
     )
   )
 
-  class(result) <- "hapr_lm_fit"
+  class(result) <- c("hapr_lm_fit", "hapr_fit")
   result
 }
