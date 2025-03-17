@@ -1,6 +1,6 @@
 # predict.R
 simulate <- function(object, newdata, ...) {
-  UseMethod("predict")
+  UseMethod("simulate")
 }
 
 #' Simulate Data from a hapr_fit Object

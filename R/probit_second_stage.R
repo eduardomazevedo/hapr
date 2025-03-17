@@ -95,10 +95,12 @@ hapr_probit_second_stage <- function(
       r2_current = r2_current,
       r2_future = r2_future,
       posterior_parameters = posterior,
-      beta = beta
+      beta = beta,
+      var_v = var_v,
+      var_epsilon = var_epsilon
     )
   )
 
-  class(result) <- "hapr_probit_fit"
+  class(result) <- c("hapr_probit_fit", "hapr_fit")
   return(result)
 }
