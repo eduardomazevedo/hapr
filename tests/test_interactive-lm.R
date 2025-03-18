@@ -33,6 +33,10 @@ first_stage <- hapr_lm_first_stage(y, gc_normalized, w)
 second_stage <- hapr_lm_second_stage(first_stage, improvement_ratio = true_improvement_ratio)
 
 # Print the results
-print(fit)
+# print(fit)
 print(first_stage)
 print(second_stage)
+
+# # Simulate the data
+simulated <- simulate(fit, w, gc = gc_normalized)
+# print(head(simulated))

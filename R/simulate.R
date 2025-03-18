@@ -1,43 +1,44 @@
-# predict.R
-simulate <- function(object, newdata, ...) {
+#' Simulate Data from a hapr_fit Object
+#'
+#' @param object A `hapr_fit` object containing the model fit.
+#' @param w A matrix or data frame of covariates.
+#' @param gc A numeric vector of genetic components. If `NULL`, generated internally.
+#' @param repetitions Number of repetitions for the simulation. Default is 1.
+#' @param seed Random seed for reproducibility. Default is NULL.
+#'
+#' @return A data frame containing simulated genetic factors (`gf`), genetic components (`gc`), and covariates (`w`).
+#'
+#' @examples
+#' simulate(fit, w, repetitions = 10, seed = 123)
+#' @export
+simulate <- function(object, ...) {
   UseMethod("simulate")
 }
 
-#' Simulate Data from a hapr_fit Object
-#'
-#' This function simulates data based on a fitted `hapr_fit` model object.
-#'
-#' @param fit A `hapr_fit` object containing the model fit.
-#' @param w A matrix of covariates.
-#' @param gc A numeric vector of genetic components. If `NULL`, it will be generated internally.
-#' @param repetitions An integer specifying the number of repetitions for the simulation. Default is 1.
-#'
-#' @return A data frame containing the simulated genetic factors (`gf`), genetic components (`gc`), and covariates (`w`).
-#'
-#' @examples
-#' # Assuming `fit` is a hapr_fit object and `w` is a matrix of covariates
-#' simulate.hapr_fit(fit, w, repetitions = 10)
-#'
-simulate.hapr_fit <- function(fit, w, gc = NULL, repetitions = 1) {
-  n <- nrow(w) * repetitions
-  w <- w[rep(seq_len(nrow(w)), repetitions), ]
+#' @export
+simulate.hapr_fit <- function(object, w, gc = NULL, repetitions = 1, seed = NULL, ...) {
+  if (!inherits(object, "hapr_fit")) stop("object must be of class 'hapr_fit'")
+  if (!is.matrix(w) && !is.data.frame(w)) stop("w must be a matrix or data frame")
 
-  wtheta <- model.matrix(~., data = w) %*% fit$first_stage$gc_w_results$theta
+  if (!is.null(seed)) set.seed(seed)
+
+  fit <- object
+  n <- nrow(w) * repetitions
+  w <- as.data.frame(w)[rep(seq_len(nrow(w)), repetitions), ]
+
+  wtheta <- model.matrix(~., data = w) %*% fit$coefficients$theta
 
   if (is.null(gc)) {
-    gf <- rnorm(n, 0, sqrt(fit$second_stage$var_v)) + wtheta
-    gc <- gf + rnorm(n, 0, sqrt(fit$second_stage$var_epsilon))
+    gf <- rnorm(n, 0, sqrt(fit$stats$var_v)) + wtheta
+    gc <- gf + rnorm(n, 0, sqrt(fit$stats$var_epsilon))
   } else {
-    a <- fit$second_stage$posterior_parameters$a
-    b <- fit$second_stage$posterior_parameters$b
-    c <- fit$second_stage$posterior_parameters$c
-
-    
+    a <- fit$stats$posterior$a
+    b <- fit$stats$posterior$b
+    c <- fit$stats$posterior$c
     z <- rnorm(n, 0, 1)
     gf <- a * gc + b * wtheta + c * z
   }
 
-  # Bind gf and gc as new columns to the data frame w
   result <- cbind(gf = gf, gc = gc, w)
 
   return(result)

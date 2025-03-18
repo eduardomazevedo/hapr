@@ -17,22 +17,32 @@ hapr_lm_first_stage <- function(y, gc, w) {
   w <- preprocessed$w
   rm(preprocessed)
 
-  # Get regression results of gc on w
-  gc_w_results <- gc_regression(gc, w)
+  # Regressions
+  regressions <- list(
+    gc_on_w = strip_lm(lm(gc ~ ., data = w)),
+    y_on_w = strip_lm(lm(y ~ ., data = w)),
+    y_on_gc = strip_lm(lm(y ~ gc)),
+    y_on_gc_w = strip_lm(lm(y ~ ., data = cbind(gc = gc, w)))
+  )
 
-  # Regress y on gc and w
-  y_gc_w_results <- feasible_regression_lm(y, gc, w)
-
-  # Compute max_r2_gf
-  max_r2_gf_list <- list(
-    max_r2_gf = gc_w_results$max_improvement_ratio * y_gc_w_results$r2_gc
+  # First stage results
+  coefficients <- list(
+    theta = regressions$gc_on_w$coefficients,
+    vcov_theta = regressions$gc_on_w$vcov_coefficients,
+    gamma = regressions$y_on_gc_w$coefficients,
+    vcov_gamma = regressions$y_on_gc_w$vcov_coefficients
+  )
+  stats <- list(
+    var_v_plus_var_epsilon = regressions$gc_on_w$sigma_squared,
+    max_improvement_ratio = 1 / (1 - regressions$gc_on_w$sigma_squared),
+    var_wtheta = regressions$gc_on_w$explained_variance
   )
 
   # Return
   result <- list(
-    gc_w_results = gc_w_results,
-    y_gc_w_results = y_gc_w_results,
-    first_state_stats = max_r2_gf_list
+    regressions = regressions,
+    coefficients = coefficients,
+    stats = stats
   )
   class(result) <- "hapr_lm_first_stage_fit"
   result
