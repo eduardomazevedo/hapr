@@ -22,21 +22,15 @@ strip_lm <- function(fit) {
   
   # Variance of outcome variable
   outcome_variance <- var(fitted_values + residuals(fit))
-  
-  # Stripped-down lm object
-  strip_lm <- function(fit) {
-    fit$model <- NULL
-    fit$y <- NULL
-    fit$x <- NULL
-    fit$residuals <- NULL
-    fit$fitted.values <- NULL
-    fit$effects <- NULL
-    fit$qr$qr <- NULL
-    fit$weights <- NULL
-    fit
-  }
-  
-  fit_stripped <- strip_lm(fit)
+
+  fit$model <- NULL
+  fit$y <- NULL
+  fit$x <- NULL
+  fit$residuals <- NULL
+  fit$fitted.values <- NULL
+  fit$effects <- NULL
+  fit$qr$qr <- NULL
+  fit$weights <- NULL
   
   # Return everything in a clean list
   list(
@@ -46,7 +40,7 @@ strip_lm <- function(fit) {
     explained_variance = explained_variance,
     sigma_squared = sigma_squared,
     var_outcome = outcome_variance,
-    stripped_model = fit_stripped
+    stripped_model = fit
   )
 }
 
@@ -67,21 +61,20 @@ strip_probit <- function(fit) {
   r2 <- r2_liability_probit(fit)
 
   # Strip unnecessary elements
-  strip_fit <- fit
-  strip_fit$model <- NULL
-  strip_fit$y <- NULL
-  strip_fit$x <- NULL
-  strip_fit$residuals <- NULL
-  strip_fit$fitted.values <- NULL
-  strip_fit$effects <- NULL
-  strip_fit$qr$qr <- NULL
-  strip_fit$weights <- NULL
+  fit$model <- NULL
+  fit$y <- NULL
+  fit$x <- NULL
+  fit$residuals <- NULL
+  fit$fitted.values <- NULL
+  fit$effects <- NULL
+  fit$qr$qr <- NULL
+  fit$weights <- NULL
   
   # Return simplified object
   list(
     coefficients = coefficients,
     vcov_coefficients = vcov_coefficients,
     r2 = r2,
-    stripped_model = strip_fit
+    stripped_model = fit
   )
 }

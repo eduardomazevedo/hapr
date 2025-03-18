@@ -27,4 +27,11 @@ y <- 0.42 * gf + rnorm(n) + 0.17 * w$w1
 
 
 # Call the hapr_lm function
-generic_fit <- hapr(y, gc_normalized, w, model_type = "lm", improvement_ratio = true_improvement_ratio)
+first_stage <- hapr_first_stage(y, gc_normalized, w, model_type = "lm")
+
+# Call the hapr_lm_second_stage function
+second_stage <- hapr_second_stage(first_stage, improvement_ratio = 1.5)
+
+# Call the hapr function
+hapr_fit <- hapr(y, gc_normalized, w, model_type = "lm", improvement_ratio = 1.5)
+
