@@ -38,5 +38,5 @@ print(first_stage)
 print(second_stage)
 
 # # Simulate the data
-simulated <- simulate(fit, w, gc = gc_normalized)
+simulated <- simulate(fit, w)
 # print(head(simulated))
