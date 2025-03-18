@@ -32,6 +32,10 @@ hapr_second_stage <- function(
   if (is.null(r2_current)) {
     r2_current_source <- "first_stage"
     r2_current <- first_stage$regressions$y_on_gc$r2 |> as.numeric()
+    if (first_stage$model_type == "cox") {
+      r2_current <- NA
+      r2_current_source <- "cox model, not available"
+    }
   } else {
     r2_current_source <- "user_provided"
   }
@@ -39,6 +43,9 @@ hapr_second_stage <- function(
   if (is.null(r2_future)) {
     heritability_source <- "improvement_ratio"
     r2_future <- improvement_ratio * r2_current
+    if (first_stage$model_type == "cox") {
+      r2_future <- NA
+    }
   } else {
     heritability_source <- "r2_future"
     improvement_ratio <- r2_future / r2_current
@@ -65,6 +72,17 @@ hapr_second_stage <- function(
 
   additional_parameters <- if (first_stage$model_type == "lm") {
     list(var_eta = first_stage$regressions$y_on_gc_w$sigma_squared - posterior$c^2)
+  } else if (first_stage$model_type == "cox") {
+    theta_intercept <- first_stage$coefficients$theta[1]
+    base_hazard_conversion_ratio <- exp(
+      beta["gf"]^2 * posterior$c^2 / 2 +
+      beta["gf"] * theta_intercept * posterior$b
+    )
+    baseline_hazard <- first_stage$regressions$y_on_gf_w$baseline_hazard
+    baseline_hazard$hazard <- baseline_hazard$hazard / base_hazard_conversion_ratio
+    first_stage$regressions$y_on_gf_w$baseline_hazard <- baseline_hazard
+    list(base_hazard_conversion_ratio = base_hazard_conversion_ratio,
+         baseline_hazard = baseline_hazard)
   } else {
     list()
   }
@@ -115,6 +133,11 @@ calculate_beta <- function(model_type, coefficients, posterior) {
     beta[i_gc] <- gamma[i_gc] / sqrt(sqrt_input)
     beta[i_other] <- gamma[i_other] * sqrt(1 + (posterior$c^2) * (beta[i_gc]^2)) -
       posterior$b * theta * beta[i_gc]
+  } else if (model_type == "cox") {
+    theta_intercept <- theta[1] # Remeber this will matter for the base hazard
+    theta_without_intercept <- theta[-1]
+    beta[i_gc] <- gamma[i_gc] / posterior$a
+    beta[i_other] <- gamma[i_other] - beta[i_gc] * posterior$b * theta_without_intercept
   }
 
   # Rename gc to gf

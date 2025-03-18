@@ -26,6 +26,10 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     regression_function <- function(data) {
       strip_probit(glm(y ~ ., data = data, family = binomial(link = "probit")))
     }
+  } else if (model_type == "cox") {
+    regression_function <- function(data) {
+      strip_cox(survival::coxph(y ~ ., data = data))
+    }
   }
 
   # Regressions

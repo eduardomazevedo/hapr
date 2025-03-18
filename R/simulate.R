@@ -1,7 +1,12 @@
 simulate <- function(object, w, gc = NULL, repetitions = 1) {
+  # Check if w is a data frame
+  if (!is.data.frame(w)) {
+    stop("The 'w' parameter must be a data frame.")
+  }
+
   fit <- object
   n <- nrow(w) * repetitions
-  w <- as.data.frame(w)[rep(seq_len(nrow(w)), repetitions), ]
+  w <- as.data.frame(w[rep(seq_len(nrow(w)), repetitions), ])
 
   wtheta <- model.matrix(~., data = w) %*% fit$coefficients$theta
 

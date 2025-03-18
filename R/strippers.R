@@ -78,3 +78,49 @@ strip_probit <- function(fit) {
     stripped_model = fit
   )
 }
+
+
+strip_cox <- function(fit) {
+  # Check if model is a Cox proportional hazards model
+  if (!inherits(fit, "coxph")) {
+    stop("Model must be a coxph object from the survival package.")
+  }
+
+  # Extract coefficients
+  coefficients <- fit$coefficients
+
+  # Extract variance-covariance matrix of coefficients
+  vcov_coefficients <- vcov(fit)
+
+  # Compute baseline hazard function
+  baseline_hazard <- survival::basehaz(fit, centered = FALSE)
+
+  # Strip unnecessary elements
+  fit$model <- NULL
+  fit$y <- NULL
+  fit$x <- NULL
+  fit$residuals <- NULL
+  fit$linear.predictors <- NULL
+  fit$fitted.values <- NULL
+  fit$effects <- NULL
+  fit$weights <- NULL
+  fit$call <- NULL
+  fit$terms <- NULL
+  # fit$formula <- NULL
+  # fit$means <- NULL
+  fit$concordance <- NULL
+  fit$loglik <- NULL
+  fit$wald.test <- NULL
+  fit$score <- NULL
+  fit$rscore <- NULL
+  fit$n <- NULL
+  fit$nevent <- NULL
+
+  # Return everything in a clean list
+  list(
+    coefficients = coefficients,
+    vcov_coefficients = vcov_coefficients,
+    baseline_hazard = baseline_hazard,
+    stripped_model = fit
+  )
+}
