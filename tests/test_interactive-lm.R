@@ -42,3 +42,5 @@ predicted_w <- predict.hapr_fit(fit, newdata = simulated_w)
 plot(predicted_w$y_hat_w, predicted_w$y_hat_w)
 plot(predicted_w$y_hat_w, predicted_w$y_hat_gc_w)
 plot(predicted_w$y_hat_w, predicted_w$y_hat_gf_w)
+
+print.hapr_fit(fit)
