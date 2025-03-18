@@ -70,16 +70,16 @@ hapr_second_stage <- function(
   first_stage$regressions$y_on_gf_w$stripped_model$coefficients <- beta
   first_stage$regressions$y_on_gc_w$coefficients <- beta
 
-# Compute additional parameters based on the model type
-additional_parameters <- list()
+  # Compute additional parameters based on the model type
+  additional_parameters <- list()
 
-if (first_stage$model_type == "lm") {
+  if (first_stage$model_type == "lm") {
     additional_parameters$var_eta <- first_stage$regressions$y_on_gc_w$sigma_squared - posterior$c^2
-} else if (first_stage$model_type == "cox") {
+  } else if (first_stage$model_type == "cox") {
     # Compute the base hazard conversion ratio
     theta_intercept <- first_stage$coefficients$theta[1]
     base_hazard_conversion_ratio <- exp(
-        beta["gf"]^2 * posterior$c^2 / 2 +
+      beta["gf"]^2 * posterior$c^2 / 2 +
         beta["gf"] * theta_intercept * posterior$b
     )
 
@@ -94,7 +94,7 @@ if (first_stage$model_type == "lm") {
     # Store results in `additional_parameters`
     additional_parameters$base_hazard_conversion_ratio <- base_hazard_conversion_ratio
     additional_parameters$baseline_hazard <- baseline_hazard
-}
+  }
 
 
   result <- list(

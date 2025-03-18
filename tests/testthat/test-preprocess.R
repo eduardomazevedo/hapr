@@ -89,7 +89,7 @@ test_that("preprocess handles missing values", {
   y <- rnorm(n)
   gc <- rnorm(n)
   w <- data.frame(x1 = rnorm(n), x2 = rnorm(n))
-  
+
   y[1:5] <- NA
   gc[6:10] <- NA
   w$x1[11:15] <- NA
@@ -107,46 +107,56 @@ test_that("preprocess throws an error for invalid model_type", {
   gc <- rnorm(100)
   w <- data.frame(x1 = rnorm(100), x2 = rnorm(100))
 
-  expect_error(preprocess(y, gc, w, model_type = "invalid"),
-               "model_type must be one of: 'lm', 'probit', 'cox'")
+  expect_error(
+    preprocess(y, gc, w, model_type = "invalid"),
+    "model_type must be one of: 'lm', 'probit', 'cox'"
+  )
 })
 
 test_that("preprocess throws an error for invalid probit y", {
   set.seed(123)
-  y <- factor(c("A", "B", "C"))  # More than 2 levels
+  y <- factor(c("A", "B", "C")) # More than 2 levels
   gc <- rnorm(100)
   w <- data.frame(x1 = rnorm(100), x2 = rnorm(100))
 
-  expect_error(preprocess(y, gc, w, model_type = "probit"),
-               "For probit models, y must have exactly 2 levels")
+  expect_error(
+    preprocess(y, gc, w, model_type = "probit"),
+    "For probit models, y must have exactly 2 levels"
+  )
 })
 
 test_that("preprocess throws an error for non-Surv cox model y", {
   set.seed(123)
-  y <- rnorm(100)  # Not a Surv object
+  y <- rnorm(100) # Not a Surv object
   gc <- rnorm(100)
   w <- data.frame(x1 = rnorm(100), x2 = rnorm(100))
 
-  expect_error(preprocess(y, gc, w, model_type = "cox"),
-               "For cox models, y must be a Surv object")
+  expect_error(
+    preprocess(y, gc, w, model_type = "cox"),
+    "For cox models, y must be a Surv object"
+  )
 })
 
 test_that("preprocess throws an error when lengths do not match", {
   set.seed(123)
   y <- rnorm(100)
-  gc <- rnorm(101)  # Different length
+  gc <- rnorm(101) # Different length
   w <- data.frame(x1 = rnorm(100), x2 = rnorm(100))
 
-  expect_error(preprocess(y, gc, w, model_type = "lm"),
-               "y, gc, and w must have the same number of observations")
+  expect_error(
+    preprocess(y, gc, w, model_type = "lm"),
+    "y, gc, and w must have the same number of observations"
+  )
 })
 
 test_that("preprocess throws an error if w is not a data frame", {
   set.seed(123)
   y <- rnorm(100)
   gc <- rnorm(100)
-  w <- matrix(rnorm(200), ncol = 2)  # Not a data frame
+  w <- matrix(rnorm(200), ncol = 2) # Not a data frame
 
-  expect_error(preprocess(y, gc, w, model_type = "lm"),
-               "w must be a data frame")
+  expect_error(
+    preprocess(y, gc, w, model_type = "lm"),
+    "w must be a data frame"
+  )
 })

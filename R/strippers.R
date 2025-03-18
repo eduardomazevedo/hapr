@@ -32,14 +32,14 @@ strip_lm <- function(fit) {
 
   # Compute R^2
   r2 <- summary(fit)$r.squared
-  
+
   # Explained variance: variance of fitted values
   fitted_values <- fitted(fit)
   explained_variance <- var(fitted_values)
-  
+
   # Residual variance (sigma^2)
   sigma_squared <- summary(fit)$sigma^2
-  
+
   # Variance of outcome variable
   outcome_variance <- var(fitted_values + residuals(fit))
 
@@ -51,11 +51,11 @@ strip_lm <- function(fit) {
   fit$effects <- NULL
   fit$qr$qr <- NULL
   fit$weights <- NULL
-  
+
   # Return everything in a clean list
   list(
     coefficients = coefficients,
-    vcov_coefficients = vcov_coefficients,    
+    vcov_coefficients = vcov_coefficients,
     r2 = r2,
     explained_variance = explained_variance,
     sigma_squared = sigma_squared,
@@ -106,7 +106,7 @@ strip_probit <- function(fit) {
   fit$effects <- NULL
   fit$qr$qr <- NULL
   fit$weights <- NULL
-  
+
   # Return simplified object
   list(
     coefficients = coefficients,
@@ -120,7 +120,7 @@ strip_probit <- function(fit) {
 #' Strip a Cox proportional hazards model to essential components
 #'
 #' @description
-#' This internal function takes a Cox proportional hazards model object and extracts 
+#' This internal function takes a Cox proportional hazards model object and extracts
 #' the essential components while removing memory-intensive parts of the model.
 #'
 #' @param fit An object of class 'coxph' from the survival package

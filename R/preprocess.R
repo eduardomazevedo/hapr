@@ -54,7 +54,7 @@ preprocess <- function(y, gc, w, model_type) {
   complete_cases <- complete.cases(y, gc, w)
   y <- y[complete_cases]
   gc <- gc[complete_cases]
-  w <- w[complete_cases, , drop = FALSE]  
+  w <- w[complete_cases, , drop = FALSE]
 
   # Check that y, gc, and w have the same number of observations
   if (length(y) != length(gc) || length(y) != nrow(w)) {

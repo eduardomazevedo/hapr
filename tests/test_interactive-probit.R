@@ -1,5 +1,5 @@
 # Create a small interactive test for hapr_probit
-set.seed(123)  # For reproducibility
+set.seed(123) # For reproducibility
 devtools::load_all()
 library(tidyverse)
 library(listviewer)
@@ -7,9 +7,9 @@ library(listviewer)
 # Create fake data
 n <- 1e4
 
-var_v <- 1/3
-var_epsilon <- 1/3
-var_thetaw <- 1/3
+var_v <- 1 / 3
+var_epsilon <- 1 / 3
+var_thetaw <- 1 / 3
 
 true_improvement_ratio <- 1 / (1 - var_epsilon)
 
@@ -34,11 +34,11 @@ fit <- hapr(y_binary, gc_normalized, w, model_type = "probit", improvement_ratio
 
 print(fit$coefficients$beta)
 
-simulated_w <- simulate(fit, w = w) |> as.tibble()
-simulated_w_gc <- simulate(fit, w = w, gc = gc_normalized) |> as.tibble()
+simulated_w <- hapr_simulate(fit, w = w) |> as_tibble()
+simulated_w_gc <- hapr_simulate(fit, w = w, gc = gc_normalized) |> as_tibble()
 
 # Test predict
-predicted_w <- predict.hapr_fit(fit, newdata = simulated_w)
+predicted_w <- predict(fit, newdata = simulated_w)
 
 plot(predicted_w$y_hat_w, predicted_w$y_hat_w)
 plot(predicted_w$y_hat_w, predicted_w$y_hat_gc_w)
