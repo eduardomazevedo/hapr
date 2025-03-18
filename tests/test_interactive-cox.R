@@ -54,3 +54,15 @@ simulated_w <- simulate(fit, w = w) |> as.tibble()
 
 # Test predict
 predicted_w <- predict.hapr_fit(fit, newdata = simulated_w)
+summary(predicted_w)
+
+# Test basehaz
+basehaz <- basehaz.hapr_fit(fit, covariates = "gf_w")
+summary(basehaz)
+
+# Test survfit
+survfit <- survfit.hapr_fit(fit, covariates = "gf_w", newdata = simulated_w |> head(300))
+
+# Test plot.hapr_survfit
+plot.hapr_survfit(survfit, mode = "percentiles")
+# plot.hapr_survfit(survfit, mode = "subjects", newdata = simulated_w |> head(3))

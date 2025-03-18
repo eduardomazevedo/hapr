@@ -72,5 +72,10 @@ preprocess <- function(y, gc, w, model_type) {
     stop("w must be a data frame.")
   }
 
+  # Make sure w has no variables called gc or gf
+  if (any(names(w) %in% c("gc", "gf"))) {
+    stop("w must not have variables called gc or gf")
+  }
+
   list(y = y, gc = gc, w = w)
 }
