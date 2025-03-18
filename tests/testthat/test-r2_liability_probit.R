@@ -13,14 +13,18 @@ test_that("r2_liability_probit works correctly for a valid probit model", {
   expect_true(r2 >= 0 && r2 <= 1)
 })
 
-test_that("r2_liability_probit returns 0 for intercept-only model", {
+test_that("r2_liability_probit returns 0 and warns for intercept-only model", {
   set.seed(123)
   n <- 100
   y <- rbinom(n, 1, 0.5) # Random binary response with no predictors
 
   model <- glm(y ~ 1, family = binomial(link = "probit"))
-  r2 <- r2_liability_probit(model)
-
+  
+  # Test both the warning and the return value
+  expect_warning(
+    r2 <- r2_liability_probit(model),
+    "The model only has an intercept. R\\^2_liability is 0."
+  )
   expect_equal(r2, 0)
 })
 

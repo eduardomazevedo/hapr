@@ -19,10 +19,9 @@ hapr_first_stage(y, gc, w, model_type)
 A hapr_first_stage_fit object containing the results of the first stage.
 }
 \description{
-HAPR first stage fit
+Fits the first stage of the HARP model given the outcome y, PRS gc, and control variables w.
 }
 \details{
-Fits the HARP model given the outcome y, PRS gc, and control variables w. This returns
-a first stage fit, which does not need to assume an improvement ratio. Run
-hapr_lm_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
+This returns a first stage fit, which does not need to assume an improvement ratio. Run
+hapr_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
 }

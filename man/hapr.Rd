@@ -31,5 +31,10 @@ hapr(
 A hapr_fit object.
 }
 \description{
-Fits the HARP model given the outcome y, PRS gc, and control variables w.
+Fits the HARP model given the outcome y, PRS gc, and control variables w. User
+has to specify either an improvement ratio in expected increase of the
+gwas R-squared, or current R-squared and future expected R-squared.
+}
+\details{
+If the current R-squared is not provided, it will be computed from the data.
 }

@@ -25,6 +25,9 @@ hapr_second_stage(
 A hapr_lm_fit object containing the results of the second stage
 }
 \description{
+Fits the full HARP model given the first stage fit and an improvement ratio.
+}
+\details{
 After fitting the first stage, we can specify an improvement ratio to estimate
 the full model. Alternatively, we can specify the R-squared of the future fit
 to estimate the improvement ratio. If specifying the r2_future, you can also

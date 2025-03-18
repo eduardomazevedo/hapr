@@ -12,7 +12,7 @@
 \item{newdata}{A data frame with new observations for prediction.}
 
 \item{covariates}{A character vector specifying which covariates to use for prediction.
-Defaults to \code{c('w', 'gc_w', 'gf_w')}.}
+Defaults to \code{c('w', 'gc_w', 'gf_w')}: just covariates w, or combine them with gc or gf.}
 
 \item{type}{A character string indicating the type of prediction.
 - For \code{lm}/\code{probit}, defaults to \code{"response"}.
@@ -24,5 +24,5 @@ A data frame with the same rows as \code{newdata}, plus columns for predictions.
 \description{
 This function generates predictions using a fitted \code{hapr_fit} object.
 It computes predictions based on specified covariates, supporting
-linear (\code{lm}), probit, and Cox regression (\code{cox}).
+linear (\code{lm}), \code{probit}, and \code{cox} regression.
 }

@@ -145,7 +145,7 @@ test_that("preprocess throws an error when lengths do not match", {
 
   expect_error(
     preprocess(y, gc, w, model_type = "lm"),
-    "y, gc, and w must have the same number of observations"
+    "not all arguments have the same length"
   )
 })
 
