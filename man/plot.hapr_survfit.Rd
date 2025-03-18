@@ -5,13 +5,14 @@
 \title{Plot survival curves from a HAPR survival fit}
 \usage{
 \method{plot}{hapr_survfit}(
-  hapr_survfit_object,
+  x,
   mode = "percentiles",
-  percentiles = c(0.01, 0.1, 0.22, 0.5, 0.75, 0.9, 0.99)
+  percentiles = c(0.01, 0.1, 0.22, 0.5, 0.75, 0.9, 0.99),
+  ...
 )
 }
 \arguments{
-\item{hapr_survfit_object}{A hapr_survfit object returned by survfit.hapr_fit}
+\item{x}{A hapr_survfit object returned by survfit.hapr_fit}
 
 \item{mode}{Character string indicating how to select curves for plotting:
 "percentiles" (default) to show curves at specific risk percentiles
@@ -19,6 +20,8 @@
 
 \item{percentiles}{Numeric vector of probability values (0-1) indicating which
 percentiles to plot when mode="percentiles"}
+
+\item{...}{Additional arguments (not currently used)}
 }
 \value{
 A plot of the survival curves (using ggplot2 if available, otherwise base R)

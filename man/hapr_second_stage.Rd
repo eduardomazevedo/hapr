@@ -8,8 +8,7 @@ hapr_second_stage(
   first_stage,
   improvement_ratio = NULL,
   r2_current = NULL,
-  r2_future = NULL,
-  ...
+  r2_future = NULL
 )
 }
 \arguments{

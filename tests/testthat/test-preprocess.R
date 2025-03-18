@@ -1,6 +1,3 @@
-library(testthat)
-library(survival)
-
 test_that("preprocess works for linear models", {
   set.seed(123)
   n <- 100
@@ -60,7 +57,7 @@ test_that("preprocess works for cox models", {
   n <- 100
   time <- rexp(n)
   status <- sample(0:1, n, replace = TRUE)
-  y <- Surv(time, status)
+  y <- survival::Surv(time, status)
   gc <- rnorm(n)
   w <- data.frame(x1 = rnorm(n), x2 = rnorm(n))
 

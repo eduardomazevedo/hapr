@@ -7,7 +7,7 @@
 calculate_beta(model_type, coefficients, posterior)
 }
 \arguments{
-\item{model_type}{The type of model ("lm" or "probit")}
+\item{model_type}{The type of model ("lm", "probit" or "cox")}
 
 \item{coefficients}{A list containing gamma and theta coefficients}
 

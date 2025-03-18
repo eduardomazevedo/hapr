@@ -21,6 +21,8 @@ hapr(
 
 \item{w}{Control variables}
 
+\item{model_type}{Type of model to fit ("lm", "probit", "cox")}
+
 \item{improvement_ratio}{The ratio of R-squared of the future fit to the current fit.}
 
 \item{r2_current}{The R-squared of the current fit}

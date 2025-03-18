@@ -1,6 +1,6 @@
 #' Calculate a, b, and c
+#' 
 #' Calculates the constants of the posterior distribution of gf.
-#' @noRd
 #' @param var_epsilon Variance of epsilon
 #' @param var_v Variance of V
 #' @return A list containing a, b, and c

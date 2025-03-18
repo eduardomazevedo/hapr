@@ -20,8 +20,7 @@ hapr_second_stage <- function(
     first_stage,
     improvement_ratio = NULL,
     r2_current = NULL,
-    r2_future = NULL,
-    ...) {
+    r2_future = NULL) {
   if (!inherits(first_stage, "hapr_first_stage_fit")) {
     stop("first_stage must be a hapr_first_stage_fit object.")
   }
@@ -123,7 +122,7 @@ hapr_second_stage <- function(
 
 #' Calculate beta coefficients based on model type
 #'
-#' @param model_type The type of model ("lm" or "probit")
+#' @param model_type The type of model ("lm", "probit" or "cox")
 #' @param coefficients A list containing gamma and theta coefficients
 #' @param posterior The posterior values from the abc function
 #' @return A named numeric vector of beta coefficients

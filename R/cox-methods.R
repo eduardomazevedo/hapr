@@ -61,21 +61,23 @@ hapr_survfit <- function(fit, covariates = "gf_w", newdata) {
 
 #' Plot survival curves from a HAPR survival fit
 #'
-#' @param hapr_survfit_object A hapr_survfit object returned by survfit.hapr_fit
+#' @param x A hapr_survfit object returned by survfit.hapr_fit
 #' @param mode Character string indicating how to select curves for plotting:
 #'        "percentiles" (default) to show curves at specific risk percentiles
 #'        "subjects" to show curves for each individual subject
 #' @param percentiles Numeric vector of probability values (0-1) indicating which
 #'        percentiles to plot when mode="percentiles"
+#' @param ... Additional arguments (not currently used)
 #' @return A plot of the survival curves (using ggplot2 if available, otherwise base R)
 #' @export
-plot.hapr_survfit <- function(hapr_survfit_object,
+plot.hapr_survfit <- function(x,
                               mode = "percentiles",
-                              percentiles = c(0.01, 0.10, 0.22, 0.50, 0.75, 0.90, 0.99)) {
+                              percentiles = c(0.01, 0.10, 0.22, 0.50, 0.75, 0.90, 0.99),
+                              ...) {
   # Extract relevant data
-  time <- hapr_survfit_object$time
-  surv_matrix <- hapr_survfit_object$surv
-  relative_risk <- hapr_survfit_object$relative_risk
+  time <- x$time
+  surv_matrix <- x$surv
+  relative_risk <- x$relative_risk
 
   num_subjects <- length(relative_risk)
   if (num_subjects == 0) {

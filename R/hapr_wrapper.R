@@ -11,6 +11,7 @@
 #' @param y Outcome variable
 #' @param gc Polygenic risk score (has to be normalized)
 #' @param w Control variables
+#' @param model_type Type of model to fit ("lm", "probit", "cox")
 #' @param improvement_ratio The ratio of R-squared of the future fit to the current fit.
 #' @param r2_current The R-squared of the current fit
 #' @param r2_future The R-squared of the future fit

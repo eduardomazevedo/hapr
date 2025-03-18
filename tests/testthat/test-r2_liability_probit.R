@@ -1,5 +1,3 @@
-library(testthat)
-
 test_that("r2_liability_probit works correctly for a valid probit model", {
   set.seed(123)
   n <- 100
