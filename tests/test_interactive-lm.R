@@ -1,6 +1,8 @@
 # Create a small interactive test for hapr_lm
 set.seed(123)  # For reproducibility
 devtools::load_all()
+library(tidyverse)
+library(listviewer)
 
 # Create fake data
 n <- 1e4
@@ -27,4 +29,16 @@ y <- 0.42 * gf + rnorm(n) + 0.17 * w$w1
 
 
 # Call the hapr_lm function
-generic_fit <- hapr(y, gc_normalized, w, model_type = "lm", improvement_ratio = true_improvement_ratio)
+fit <- hapr(y, gc_normalized, w, model_type = "lm", improvement_ratio = true_improvement_ratio)
+
+print(fit$coefficients$beta)
+
+simulated_w <- simulate(fit, w = w) |> as.tibble()
+simulated_w_gc <- simulate(fit, w = w, gc = gc_normalized) |> as.tibble()
+
+# Test predict
+predicted_w <- predict.hapr_fit(fit, newdata = simulated_w)
+
+plot(predicted_w$y_hat_w, predicted_w$y_hat_w)
+plot(predicted_w$y_hat_w, predicted_w$y_hat_gc_w)
+plot(predicted_w$y_hat_w, predicted_w$y_hat_gf_w)
