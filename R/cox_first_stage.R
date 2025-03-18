@@ -23,8 +23,17 @@ hapr_cox_first_stage <- function(y, gc, w) {
   # Regress y on gc and w
   y_gc_w_results <- feasible_regression_cox(y, gc, w)
 
+  # Regress y on gc only
+  y_gc_results <- list(
+    cox_model = survival::coxph(y ~ gc)
+  )
+
   # Return
-  result <- c(gc_w_results, y_gc_w_results)
+  result <- list(
+    gc_w_results = gc_w_results,
+    y_gc_w_results = y_gc_w_results,
+    y_gc_results = y_gc_results
+  )
   class(result) <- "hapr_cox_first_stage_fit"
   result
 }

@@ -3,6 +3,8 @@
 # exponential distribution with a hazard rate of exp(gc) / 10.
 
 set.seed(123)  # For reproducibility
+library(survival)
+devtools::load_all()
 
 # Number of observations
 n <- 1e4  # Change as needed
@@ -35,9 +37,12 @@ sim_data <- data.frame(gf, w, gc, hazard_rate, t)
 # Display the first few rows
 head(sim_data)
 
+# Fit first stage
+first_stage <- hapr_cox_first_stage(Surv(sim_data$t), sim_data$gc, sim_data$w |> as.data.frame())
+
 # Now fit the model
 fit <- hapr_cox(Surv(sim_data$t), sim_data$gc, sim_data$w |> as.data.frame(), improvement_ratio = true_improvement_ratio)
 
 # Print the results
-print(fit)
+str(fit)
 

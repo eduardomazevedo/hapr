@@ -34,25 +34,26 @@ hapr_cox_second_stage <- function(
     stop("Only one of improvement_ratio or r2_future should be provided.")
   }
 
-  if (improvement_ratio >= first_stage$max_improvement_ratio) {
+  if (improvement_ratio >= first_stage$gc_w_results$max_improvement_ratio) {
     stop(
       sprintf(
         "Improvement ratio must be less than %s.",
-        first_stage$max_improvement_ratio
+        first_stage$gc_w_results$max_improvement_ratio
       )
     )
   }
 
   # Var epsilon
   var_epsilon <- 1 - 1 / improvement_ratio
-  var_v <- first_stage$var_total - var_epsilon
+  var_v <- first_stage$gc_w_results$var_v_plus_var_epsilon - var_epsilon
 
   # Calculate a, b, and c
   posterior <- abc(var_epsilon, var_v)
 
   # beta
-  gamma <- first_stage$gamma
-  theta <- first_stage$theta
+  gamma <- first_stage$y_gc_w_results$gamma
+  theta <- first_stage$gc_w_results$theta
+  theta_intercept <- theta[1] # Remeber this will matter for the base hazard
   theta_without_intercept <- theta[-1]
   beta <- gamma
   i_gc <- which(names(gamma) == "gc")
@@ -63,13 +64,28 @@ hapr_cox_second_stage <- function(
   # Rename gc to gf in beta coefficients
   names(beta)[i_gc] <- "gf"
 
-  # Create the result object
-  result <- c(first_stage, list(
-    improvement_ratio = improvement_ratio,
-    posterior_parameters = posterior,
-    beta = beta
-  ))
+  # Base hazard conversion ratio
+  base_hazard_conversion_ratio <- exp(
+    beta["gf"]^2 * posterior$c^2 / 2 +
+    beta["gf"] * theta_intercept * posterior$b
+  )
 
-  class(result) <- "hapr_cox_fit"
+  # Base hazard
+  bh <- survival::basehaz(first_stage$y_gc_w_results$cox_model, centered = FALSE)
+  bh$hazard <- bh$hazard / base_hazard_conversion_ratio
+
+  # Create the result object
+  result <- list(
+    first_stage = first_stage,
+    second_stage = list(
+      improvement_ratio = improvement_ratio,
+      posterior_parameters = posterior,
+      beta = beta,
+      base_hazard_conversion_ratio = base_hazard_conversion_ratio,
+      base_hazard = bh
+    )
+  )
+
+  class(result) <- c("hapr_cox_fit", "hapr_fit")
   result
 }
