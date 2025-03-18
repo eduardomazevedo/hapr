@@ -4,6 +4,7 @@
 #' @param var_epsilon Variance of epsilon
 #' @param var_v Variance of V
 #' @return A list containing a, b, and c
+#' @export
 abc <- function(var_epsilon, var_v) {
   # Calculate precision
   precision_epsilon <- 1 / var_epsilon

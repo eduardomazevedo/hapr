@@ -1,3 +1,9 @@
+#' Extract baseline hazard from a HAPR Cox model
+#'
+#' @param fit A hapr_fit object from a Cox model
+#' @param covariates Character string indicating which covariates to use, one of: 'gf_w' (default), 'gc_w', or 'w'
+#' @return A data frame containing the baseline hazard with time and hazard columns
+#' @export
 basehaz.hapr_fit <- function(fit, covariates = 'gf_w') {
   if (fit$model_type != "cox") {
     stop("Basehaz function only works for Cox models.")
@@ -14,6 +20,13 @@ basehaz.hapr_fit <- function(fit, covariates = 'gf_w') {
   fit$regressions[[model_name]]$baseline_hazard
 }
 
+#' Create a survival fit from a HAPR Cox model
+#'
+#' @param fit A hapr_fit object from a Cox model
+#' @param covariates Character string indicating which covariates to use, one of: 'gf_w' (default), 'gc_w', or 'w'
+#' @param newdata A data frame containing new observations for which to compute survival curves
+#' @return A hapr_survfit object containing survival probabilities over time
+#' @export
 survfit.hapr_fit <- function(fit, covariates = 'gf_w', newdata) {
   if (fit$model_type != "cox") {
     stop("Basehaz function only works for Cox models.")
@@ -38,6 +51,17 @@ survfit.hapr_fit <- function(fit, covariates = 'gf_w', newdata) {
   return(result)
 }
 
+#' Plot survival curves from a HAPR survival fit
+#'
+#' @param hapr_survfit_object A hapr_survfit object returned by survfit.hapr_fit
+#' @param mode Character string indicating how to select curves for plotting:
+#'        "percentiles" (default) to show curves at specific risk percentiles
+#'        "subjects" to show curves for each individual subject
+#' @param percentiles Numeric vector of probability values (0-1) indicating which
+#'        percentiles to plot when mode="percentiles"
+#' @return A ggplot2 object showing the survival curves
+#' @importFrom ggplot2 ggplot aes geom_line labs theme_minimal theme element_blank scale_color_viridis_d
+#' @export
 plot.hapr_survfit <- function(hapr_survfit_object,
                               mode = "percentiles",
                               percentiles = c(0.01, 0.10, 0.22, 0.50, 0.75, 0.90, 0.99)) {

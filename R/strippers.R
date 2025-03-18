@@ -1,3 +1,23 @@
+#' Strip a linear model to essential components
+#'
+#' @description
+#' This internal function takes a linear model object and extracts the essential
+#' components while removing memory-intensive parts of the model.
+#'
+#' @param fit An object of class 'lm' (linear model)
+#'
+#' @return A list containing:
+#' \itemize{
+#'   \item coefficients: Model coefficients
+#'   \item vcov_coefficients: Variance-covariance matrix of coefficients
+#'   \item r2: R-squared value of the model
+#'   \item explained_variance: Variance of fitted values
+#'   \item sigma_squared: Residual variance
+#'   \item var_outcome: Variance of the outcome variable
+#'   \item stripped_model: A trimmed version of the original model object
+#' }
+#'
+#' @keywords internal
 strip_lm <- function(fit) {
   # Check if model is a linear model
   if (!inherits(fit, "lm")) {
@@ -45,6 +65,23 @@ strip_lm <- function(fit) {
 }
 
 
+#' Strip a probit model to essential components
+#'
+#' @description
+#' This internal function takes a probit GLM object and extracts the essential
+#' components while removing memory-intensive parts of the model.
+#'
+#' @param fit An object of class 'glm' with probit link function
+#'
+#' @return A list containing:
+#' \itemize{
+#'   \item coefficients: Model coefficients
+#'   \item vcov_coefficients: Variance-covariance matrix of coefficients
+#'   \item r2: R-squared value on the liability scale
+#'   \item stripped_model: A trimmed version of the original model object
+#' }
+#'
+#' @keywords internal
 strip_probit <- function(fit) {
   # Check if model is a probit glm
   if (!inherits(fit, "glm") || fit$family$link != "probit") {
@@ -80,6 +117,23 @@ strip_probit <- function(fit) {
 }
 
 
+#' Strip a Cox proportional hazards model to essential components
+#'
+#' @description
+#' This internal function takes a Cox proportional hazards model object and extracts 
+#' the essential components while removing memory-intensive parts of the model.
+#'
+#' @param fit An object of class 'coxph' from the survival package
+#'
+#' @return A list containing:
+#' \itemize{
+#'   \item coefficients: Model coefficients
+#'   \item vcov_coefficients: Variance-covariance matrix of coefficients
+#'   \item baseline_hazard: Baseline hazard function
+#'   \item stripped_model: A trimmed version of the original model object
+#' }
+#'
+#' @keywords internal
 strip_cox <- function(fit) {
   # Check if model is a Cox proportional hazards model
   if (!inherits(fit, "coxph")) {
