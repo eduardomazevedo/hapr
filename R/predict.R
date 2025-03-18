@@ -1,13 +1,14 @@
 #' Predict Outcomes from a hapr_fit Object
 #'
+#' @description
 #' This function generates predictions using a fitted `hapr_fit` object.
 #' It computes predictions based on specified covariates, supporting
-#' linear (`lm`), probit, and Cox regression (`cox`).
+#' linear (`lm`), `probit`, and `cox` regression.
 #'
 #' @param fit An object of class `hapr_fit`, containing fitted regression models.
 #' @param newdata A data frame with new observations for prediction.
 #' @param covariates A character vector specifying which covariates to use for prediction.
-#'        Defaults to `c('w', 'gc_w', 'gf_w')`.
+#'        Defaults to `c('w', 'gc_w', 'gf_w')`: just covariates w, or combine them with gc or gf.
 #' @param type A character string indicating the type of prediction.
 #'        - For `lm`/`probit`, defaults to `"response"`.
 #'        - For `cox`, can be `"lp"` (linear predictor) or `"response"`/`"risk"` (exp of linear predictor).
