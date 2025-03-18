@@ -1,4 +1,9 @@
 strip_lm <- function(fit) {
+  # Check if model is a linear model
+  if (!inherits(fit, "lm")) {
+    stop("Model must be a linear model.")
+  }
+
   # Coefficients
   coefficients <- fit$coefficients
 
@@ -42,5 +47,41 @@ strip_lm <- function(fit) {
     sigma_squared = sigma_squared,
     var_outcome = outcome_variance,
     stripped_model = fit_stripped
+  )
+}
+
+
+strip_probit <- function(fit) {
+  # Check if model is a probit glm
+  if (!inherits(fit, "glm") || fit$family$link != "probit") {
+    stop("Model must be a glm with probit link.")
+  }
+
+  # Coefficients
+  coefficients <- coef(fit)
+
+  # Variance-covariance matrix of coefficients
+  vcov_coefficients <- vcov(fit)
+
+  # Liability-scale R²
+  r2 <- r2_liability_probit(fit)
+
+  # Strip unnecessary elements
+  strip_fit <- fit
+  strip_fit$model <- NULL
+  strip_fit$y <- NULL
+  strip_fit$x <- NULL
+  strip_fit$residuals <- NULL
+  strip_fit$fitted.values <- NULL
+  strip_fit$effects <- NULL
+  strip_fit$qr$qr <- NULL
+  strip_fit$weights <- NULL
+  
+  # Return simplified object
+  list(
+    coefficients = coefficients,
+    vcov_coefficients = vcov_coefficients,
+    r2 = r2,
+    stripped_model = strip_fit
   )
 }

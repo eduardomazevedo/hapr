@@ -33,9 +33,9 @@ first_stage <- hapr_probit_first_stage(y_binary, gc_normalized, w)
 # Call the hapr_probit_second_stage function
 second_stage <- hapr_probit_second_stage(first_stage, improvement_ratio = 1.5)
 
-full_fit <- hapr_probit(y_binary, gc_normalized, w, improvement_ratio = 1.5)
+# full_fit <- hapr_probit(y_binary, gc_normalized, w, improvement_ratio = 1.5)
 
 # Print the results
 print(first_stage)
 print(second_stage)
-print(full_fit)
+# print(full_fit)

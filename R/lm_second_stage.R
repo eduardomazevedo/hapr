@@ -34,7 +34,7 @@ hapr_lm_second_stage <- function(
   # If r2_current is not provided, extract it from first_stage
   if (is.null(r2_current)) {
     r2_current_source <- "first_stage"
-    r2_current <- first_stage$regressions$y_on_gc$r2
+    r2_current <- first_stage$regressions$y_on_gc$r2 |> as.numeric()
   } else {
     r2_current_source <- "user_provided"
   }
@@ -97,6 +97,6 @@ hapr_lm_second_stage <- function(
       r2_current_source = r2_current_source
     ))
   )
-  class(result) <- c("hapr_fit", "hapr_lm_fit")
+  class(result) <- c("hapr_lm_fit", "hapr_fit")
   result
 }

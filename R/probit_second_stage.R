@@ -33,35 +33,40 @@ hapr_probit_second_stage <- function(
 
   # If r2_current is not provided, extract it from first_stage
   if (is.null(r2_current)) {
-    r2_current <- first_stage$y_gc_w_results$r2_gc
+    r2_current_source <- "first_stage"
+    r2_current <- first_stage$regressions$y_on_gc_w$r2 |> as.numeric()
+  } else {
+    r2_current_source <- "user_provided"
   }
 
   # Compute the missing value
   if (is.null(r2_future)) {
+    heritability_source <- "improvement_ratio"
     r2_future <- improvement_ratio * r2_current
   } else {
+    heritability_source <- "r2_future"
     improvement_ratio <- r2_future / r2_current
   }
 
-  if (improvement_ratio >= first_stage$gc_w_results$max_improvement_ratio) {
+  if (improvement_ratio >= first_stage$stats$max_improvement_ratio) {
     stop(
       sprintf(
         "Improvement ratio must be less than %s.",
-        first_stage$gc_w_results$max_improvement_ratio
+        first_stage$stats$max_improvement_ratio
       )
     )
   }
 
   # Var epsilon
   var_epsilon <- 1 - 1 / improvement_ratio
-  var_v <- first_stage$gc_w_results$var_v_plus_var_epsilon - var_epsilon
+  var_v <- first_stage$stats$var_v_plus_var_epsilon - var_epsilon
 
   # Calculate a, b, and c
   posterior <- abc(var_epsilon, var_v)
 
   # beta
-  gamma <- first_stage$y_gc_w_results$gamma
-  theta <- first_stage$gc_w_results$theta
+  gamma <- first_stage$coefficients$gamma
+  theta <- first_stage$coefficients$theta
   beta <- gamma
   i_gc <- which(names(gamma) == "gc")
   i_other <- which(names(gamma) != "gc")
@@ -89,18 +94,21 @@ hapr_probit_second_stage <- function(
 
   # Create the result object
   result <- list(
-    first_stage = first_stage,
-    second_stage = list(
+    regressions = first_stage$regressions,
+    coefficients = c(first_stage$coefficients, list(
+      beta = beta
+    )),
+    stats = c(first_stage$stats, list(
+      var_v = var_v,
+      var_epsilon = var_epsilon,
+      posterior = posterior,
       improvement_ratio = improvement_ratio,
       r2_current = r2_current,
       r2_future = r2_future,
-      posterior_parameters = posterior,
-      beta = beta,
-      var_v = var_v,
-      var_epsilon = var_epsilon
-    )
+      heritability_source = heritability_source,
+      r2_current_source = r2_current_source
+    ))
   )
-
   class(result) <- c("hapr_probit_fit", "hapr_fit")
-  return(result)
+  result
 }

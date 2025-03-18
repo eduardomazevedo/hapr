@@ -1,4 +1,4 @@
-#' HAPR probit model first stage fit
+#' HAPR probit first stage fit
 #' @param y Outcome variable
 #' @param gc Polygenic risk score (has to be normalized)
 #' @param w Control variables
@@ -7,7 +7,7 @@
 #' @details
 #' Fits the HARP model given the outcome y, PRS gc, and control variables w. This returns
 #' a first stage fit, which does not need to assume an improvement ratio. Run
-#' hapr_probit_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
+#' hapr_lm_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
 #' @export
 hapr_probit_first_stage <- function(y, gc, w) {
   # Preprocess inputs
@@ -17,22 +17,32 @@ hapr_probit_first_stage <- function(y, gc, w) {
   w <- preprocessed$w
   rm(preprocessed)
 
-  # Get regression results of gc on w
-  gc_w_results <- gc_regression(gc, w)
+  # Regressions
+  regressions <- list(
+    gc_on_w = strip_lm(lm(gc ~ ., data = w)),
+    y_on_w = strip_probit(glm(y ~ ., data = w, family = binomial(link = "probit"))),
+    y_on_gc = strip_probit(glm(y ~ gc, family = binomial(link = "probit"))),
+    y_on_gc_w = strip_probit(glm(y ~ ., data = cbind(gc = gc, w), family = binomial(link = "probit")))
+  )
 
-  # Regress y on gc and w
-  y_gc_w_results <- feasible_regression_probit(y, gc, w)
-
-  # Compute max_r2_gf
-  stats_list <- list(
-    max_r2_gf = gc_w_results$max_improvement_ratio * y_gc_w_results$r2_gc
+  # First stage results
+  coefficients <- list(
+    theta = regressions$gc_on_w$coefficients,
+    vcov_theta = regressions$gc_on_w$vcov_coefficients,
+    gamma = regressions$y_on_gc_w$coefficients,
+    vcov_gamma = regressions$y_on_gc_w$vcov_coefficients
+  )
+  stats <- list(
+    var_v_plus_var_epsilon = regressions$gc_on_w$sigma_squared,
+    max_improvement_ratio = 1 / (1 - regressions$gc_on_w$sigma_squared),
+    var_wtheta = regressions$gc_on_w$explained_variance
   )
 
   # Return
   result <- list(
-    gc_w_results = gc_w_results,
-    y_gc_w_results = y_gc_w_results,
-    first_stage_stats = stats_list
+    regressions = regressions,
+    coefficients = coefficients,
+    stats = stats
   )
   class(result) <- "hapr_probit_first_stage_fit"
   result
