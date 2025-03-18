@@ -84,4 +84,4 @@ plot(predicted_w$y_hat_w, predicted_w$y_hat_gf_w, main = "y_hat_w vs y_hat_gf_w"
 
 ## Interactive Model Output
 ```{r}
-listviewer::jsonedit(as.list(fit$coefficients))
+listviewer::jsonedit(as.list(fit))
