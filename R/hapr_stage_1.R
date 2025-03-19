@@ -57,6 +57,11 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     max_improvement_ratio = 1 / (1 - regressions$gc_on_w$sigma_squared),
     var_wtheta = regressions$gc_on_w$explained_variance
   )
+  if (stats$var_v_plus_var_epsilon > 1) {
+    warning("The variance of v plus epsilon is numerically greater than 1.")
+    stats$var_v_plus_var_epsilon <- pmin(1 - stats$var_wtheta, 1)
+    stats$max_improvement_ratio <- Inf
+  }
 
   # Return
   result <- list(

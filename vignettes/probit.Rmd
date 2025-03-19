@@ -1,0 +1,146 @@
+---
+title: "HAPR probit"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{HAPR probit}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+library(tidyverse)
+devtools::load_all()
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Number of patients
+n <- 1000
+
+# Generate gender (50/50 split)
+gender <- sample(c("male", "female"), n, replace = TRUE, prob = c(0.5, 0.5))
+
+# Vectorized approach to generate prevent_score based on gender
+prevent_score <- numeric(n)
+male_indices <- gender == "male"
+female_indices <- gender == "female"
+
+# Generate scores for males and females in one go
+prevent_score[male_indices] <- rbeta(sum(male_indices), 1, 12)  # Beta(1, 10) for men
+prevent_score[female_indices] <- rbeta(sum(female_indices), 1, 24)  # Beta(1, 20) for women
+
+# Calculate prevent_index (inverse Gaussian CDF of prevent_score)
+prevent_index <- qnorm(prevent_score)
+
+# Generate V: Gaussian with variance 1/3
+V <- rnorm(n, mean = 0, sd = sqrt(1/3))
+
+# Calculate gf: V + prevent_score/10
+gf <- V + prevent_score/2
+
+# Calculate gc: V plus Gaussian with variance 1
+gc <- V + rnorm(n, mean = 0, sd = 1)
+
+# Normalize gc
+gc <- (gc - mean(gc)) / sd(gc)
+
+# Calculate heart_disease_index: prevent_score + 0.42 * gf
+heart_disease_index <- prevent_index + V
+
+# Calculate probability of ASCVD: Gaussian CDF of heart_disease_index
+prob_ascvd <- pnorm(heart_disease_index)
+
+# Generate ASCVD flag based on probability
+ascvd_flag <- rbinom(n, 1, prob_ascvd)
+
+# Create dataset
+cvd_true_data <- tibble(
+  gender = factor(gender),
+  prevent_score = prevent_score,
+  prevent_index = prevent_index,
+  V = V,
+  gf = gf,
+  gc = gc,
+  heart_disease_index = heart_disease_index,
+  prob_ascvd = prob_ascvd,
+  ascvd = ascvd_flag
+)
+
+# Take a look at the first few rows
+head(cvd_true_data)
+
+# Summary statistics
+summary(cvd_true_data)
+
+heart_disease_data <- cvd_true_data |>
+  select(ascvd, polygenic_score = gc, prevent_score, gender)
+
+```
+
+We have electronic health records on potential cardiac patients. The patients are followed for 10 years. We observe disease status (ASCVD) and a polygenic score. We also have covariates: PREVENT score (a standard risk estimate based on traditional risk factors) and gender.
+
+```{r}
+head(heart_disease_data)
+```
+
+We want to estimate the clinical utility of the polygenic score. And to estimate how this clinical utility is expected to improve as the polygenic score becomes more predictive. The current polygenic score is based on a GWAS with $R^2$ of 2%, whereas the estimated heritability of ASCVD is around 20%. HAPR combines these heritability estimates with the current correlations to estimate a model of the future polygenic score.
+
+The main estimation function is `hapr()`.
+
+```{r, include = TRUE}
+library(hapr)
+
+covariates <- heart_disease_data |> select(prevent_score, gender) # Covariates
+
+hapr_fit <- hapr(
+  y = heart_disease_data$ascvd, # Outcome
+  gc = heart_disease_data$polygenic_score, # Polygenic score
+  w = covariates, # Covariates
+  model_type = "probit",
+  r2_current = 0.02, # Current R-squared of the polygenic score
+  r2_future = 0.2 # Future R-squared of the polygenic score
+)
+
+print(hapr_fit)
+```
+
+That was easy! Behind the scenes, `hapr()` run a feasible probit regression of ASCVD on the polygenic score and covariates. It then combines this with heritability estimates to estimate the "true model" of how ASCVD is predicted by the true polygenic score. The reported `beta` is the coefficient of the true polygenic score.
+
+It is intuitive to see what is going on if we simulate the full model with the true polygenic score:
+
+```{r}
+simulated_data <- hapr_simulate(hapr_fit, covariates)
+
+head(simulated_data)
+```
+
+The `simulated_data` contains the true polygenic score, the observed polygenic score, and the outcome. This is the dream dataset we would like to have to evaluate the utility of the polygenic score. Moreover, with the predict function, we can add the predictions from each model to the data.
+
+```{r}
+risk_dataset <- predict(hapr_fit, simulated_data)
+
+head(risk_dataset)
+```
+
+We can now compare how the current and future polygenic scores add value relative to the traditional risk factors. One simple way are scatterplots of the predicted risk using the polygenic score vs the predicted risk using the traditional risk factors. If the polygenic score adds little extra value, we should see the points clustered around the diagonal.
+
+```{r}
+# Plot for current polygenic score
+ggplot(risk_dataset, aes(x = y_hat_w, y = y_hat_gc_w)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  coord_fixed(ratio = 1) +  # Ensures 1:1 aspect ratio
+  theme_minimal() +
+  labs(x = "Predicted risk using traditional factors", 
+       y = "Predicted risk using current polygenic score")
+
+# Plot for future polygenic score
+ggplot(risk_dataset, aes(x = y_hat_w, y = y_hat_gf_w)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  coord_fixed(ratio = 1) +  # Ensures 1:1 aspect ratio
+  theme_minimal() +
+  labs(x = "Predicted risk using traditional factors", 
+       y = "Predicted risk using future polygenic score")
+```
+

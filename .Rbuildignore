@@ -2,3 +2,6 @@
 ^\.Rproj\.user$
 ^assets/icon\\.svg$
 ^LICENSE\.md$
+^dev$
+^doc$
+^Meta$

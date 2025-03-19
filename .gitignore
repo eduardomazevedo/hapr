@@ -5,3 +5,7 @@
 .DS_Store
 .quarto
 *.html
+inst/doc
+*.swp
+/doc/
+/Meta/
