@@ -1,0 +1,62 @@
+---
+title: "HAPR probit HRS Data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{HAPR probit HRS Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+library(tidyverse)
+devtools::load_all()
+
+
+hrs_data<-read_rds("~/Downloads/Research/hrs_wave.rds")
+hrs_data_person<-read_rds("~/Downloads/Research/hrs_person.rds")
+
+hrs_full<-merge(x = hrs_data, y = hrs_data_person, by = "id", all.x = TRUE)
+
+covariates <- hrs_full |> select(wave,age,bmi,smoking, total_wealth,cholesterol)
+```
+
+We have electronic health records on potential cardiac patients. The patients are followed for 10 years. We observe disease status (ASCVD) and a polygenic score. We also have covariates: PREVENT score (a standard risk estimate based on traditional risk factors) and gender.
+
+```{r, echo=FALSE}
+model <- glm(hrs_full$heart_problem~(hrs_full$prs_cad+hrs_full$wave+hrs_full$age+hrs_full$bmi+hrs_full$cholesterol+hrs_full$total_wealth),family='binomial')
+#model <- lm(hrs_full$heart_problem~(hrs_full$wave+hrs_full$age+hrs_full$bmi+hrs_full$cholesterol+hrs_full$total_wealth))
+R2logit<- function(y,model){
+    R2<- 1-(model$deviance/model$null.deviance)
+    return(R2)
+    }
+r2_current_value<-R2logit(hrs_full$heart_problem,model)
+
+```
+
+We are running the HAPR function here. We calculated the current $R^2$ based on the pseudo $R^2$ calculated by the logistic model of covariates and polygenic score.The estimated heritability of ASCVD is around 50%. HAPR combines these heritability estimates with the current correlations to estimate a model of the future polygenic score.
+
+The main estimation function is `hapr()`.
+
+```{r, echo=FALSE}
+hapr_fit <- hapr(
+  y = hrs_full$heart_problem, # Outcome
+  gc = hrs_full$prs_cad, # Polygenic score
+  w = covariates, # Covariates
+  model_type = "probit",
+  r2_current = r2_current_value, # Current R-squared of the polygenic score
+  r2_future = 0.5 # Future R-squared of the polygenic score, estimate of heritability
+)
+print(hapr_fit)
+```
+
+These are the results of the HAPR function. As we can see, there are coefficients of the hapr function.
+
+```{r}
+nrow(covariates)
+sum(is.na(covariates))
+```
+
+We can't run the hapr_simulate on this dataset due to the presence of NA values which will make the HAPR simulate function return the error 
+    `Error in hapr_simulate(hapr_fit, covariates): dims [product 139832] do not match the length of object [281208]. `
+We will create another document with the NA's removed and simulate it.
+

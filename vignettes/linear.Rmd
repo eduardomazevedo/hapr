@@ -1,5 +1,5 @@
 ---
-title: "HAPR probit"
+title: "HAPR linear"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{HAPR probit}
@@ -50,9 +50,6 @@ heart_disease_index <- prevent_index + V
 # Calculate probability of ASCVD: Gaussian CDF of heart_disease_index
 prob_ascvd <- pnorm(heart_disease_index)
 
-# Generate ASCVD flag based on probability
-ascvd_flag <- rbinom(n, 1, prob_ascvd)
-
 # Create dataset
 cvd_true_data <- tibble(
   gender = factor(gender),
@@ -62,8 +59,7 @@ cvd_true_data <- tibble(
   gf = gf,
   gc = gc,
   heart_disease_index = heart_disease_index,
-  prob_ascvd = prob_ascvd,
-  ascvd = ascvd_flag
+  prob_ascvd = prob_ascvd
 )
 
 # Take a look at the first few rows
@@ -73,7 +69,7 @@ head(cvd_true_data)
 summary(cvd_true_data)
 
 heart_disease_data <- cvd_true_data |>
-  select(ascvd, polygenic_score = gc, prevent_score, gender)
+  select(prob_ascvd, polygenic_score = gc, prevent_score, gender)
 
 ```
 
@@ -93,10 +89,10 @@ library(hapr)
 covariates <- heart_disease_data |> select(prevent_score, gender) # Covariates
 
 hapr_fit <- hapr(
-  y = heart_disease_data$ascvd, # Outcome
+  y = heart_disease_data$prob_ascvd, # Outcome
   gc = heart_disease_data$polygenic_score, # Polygenic score
   w = covariates, # Covariates
-  model_type = "probit",
+  model_type = "lm",
   r2_current = 0.02, # Current R-squared of the polygenic score
   r2_future = 0.2 # Future R-squared of the polygenic score, estimate of heritability
 )

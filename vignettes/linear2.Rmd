@@ -1,5 +1,5 @@
 ---
-title: "HAPR probit"
+title: "HAPR linear"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{HAPR probit}
@@ -34,6 +34,7 @@ prevent_index <- qnorm(prevent_score)
 
 # Generate V: Gaussian with variance 1/3
 V <- rnorm(n, mean = 0, sd = sqrt(1/3))
+y <- prevent_index + 0.5 * V + rnorm(n)
 
 # Calculate gf: V + prevent_score/10
 gf <- V + prevent_score/2
@@ -45,13 +46,10 @@ gc <- V + rnorm(n, mean = 0, sd = 1)
 gc <- (gc - mean(gc)) / sd(gc)
 
 # Calculate heart_disease_index: prevent_score + 0.42 * gf
-heart_disease_index <- prevent_index + V
+#heart_disease_index <- prevent_index + V
 
 # Calculate probability of ASCVD: Gaussian CDF of heart_disease_index
-prob_ascvd <- pnorm(heart_disease_index)
-
-# Generate ASCVD flag based on probability
-ascvd_flag <- rbinom(n, 1, prob_ascvd)
+#prob_ascvd <- pnorm(heart_disease_index)
 
 # Create dataset
 cvd_true_data <- tibble(
@@ -61,9 +59,7 @@ cvd_true_data <- tibble(
   V = V,
   gf = gf,
   gc = gc,
-  heart_disease_index = heart_disease_index,
-  prob_ascvd = prob_ascvd,
-  ascvd = ascvd_flag
+  y = y
 )
 
 # Take a look at the first few rows
@@ -73,7 +69,7 @@ head(cvd_true_data)
 summary(cvd_true_data)
 
 heart_disease_data <- cvd_true_data |>
-  select(ascvd, polygenic_score = gc, prevent_score, gender)
+  select(y, polygenic_score = gc, prevent_score, gender)
 
 ```
 
@@ -93,10 +89,10 @@ library(hapr)
 covariates <- heart_disease_data |> select(prevent_score, gender) # Covariates
 
 hapr_fit <- hapr(
-  y = heart_disease_data$ascvd, # Outcome
+  y = heart_disease_data$y, # Outcome
   gc = heart_disease_data$polygenic_score, # Polygenic score
   w = covariates, # Covariates
-  model_type = "probit",
+  model_type = "lm",
   r2_current = 0.02, # Current R-squared of the polygenic score
   r2_future = 0.2 # Future R-squared of the polygenic score, estimate of heritability
 )
@@ -143,13 +139,3 @@ ggplot(risk_dataset, aes(x = y_hat_w, y = y_hat_gf_w)) +
   labs(x = "Predicted risk using traditional factors", 
        y = "Predicted risk using future polygenic score")
 ```
-
-
-
-
-
-
-
-
-
-
