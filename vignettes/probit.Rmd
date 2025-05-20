@@ -98,7 +98,7 @@ hapr_fit <- hapr(
   w = covariates, # Covariates
   model_type = "probit",
   r2_current = 0.02, # Current R-squared of the polygenic score
-  r2_future = 0.2 # Future R-squared of the polygenic score
+  r2_future = 0.2 # Future R-squared of the polygenic score, estimate of heritability
 )
 
 print(hapr_fit)
@@ -143,4 +143,13 @@ ggplot(risk_dataset, aes(x = y_hat_w, y = y_hat_gf_w)) +
   labs(x = "Predicted risk using traditional factors", 
        y = "Predicted risk using future polygenic score")
 ```
+
+
+
+
+
+
+
+
+
 
