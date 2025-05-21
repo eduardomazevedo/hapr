@@ -1,0 +1,114 @@
+---
+title: "HAPR Height Linear Model"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{HAPR probit}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r, include = FALSE}
+library(tidyverse)
+devtools::load_all()
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Parameters
+N <- 10000
+L <- 3                 # Effect size of PRS on height in inches
+sigma_g <- sqrt(1.5)   # Noise in observed PRS
+sigma_h <- 2.8         # Residual variation in height (generally 2.9 for men, 2.7 for women )
+sigma_p <- 2.5         # Residual variation in parent height
+
+
+
+gender <- sample(c("male", "female"), N, replace = TRUE, prob = c(0.5, 0.5))
+
+# Vectorized approach to generate height based on gender
+male_indices <- gender == "male"
+female_indices <- gender == "female"
+
+# Simulate latent true PRS
+g_true <- rnorm(N, mean = 0, sd = 1)
+
+# Observed PRS: noisy version of true PRS
+g_obs <- g_true + rnorm(N, mean = 0, sd = sigma_g)
+
+# Simulate own height
+height<- L * g_true + rnorm(N, mean = 63.6, sd = sigma_h)
+height[male_indices] = height[male_indices] + 5.5
+
+# Simulate parent average height (same g, but different noise)
+parent_height <- L * g_true + rnorm(N, mean = 66.35, sd = sigma_p)
+
+# Combine into a data frame
+df <- data.frame(
+  height = height,
+  parent_height = parent_height,
+  prs_observed = g_obs,
+  prs_true = g_true
+)
+```
+
+
+We have created a sample dataset for height with which we are going to build a linear model. We are making the standard female height as 63.6 inches and male height as 69.1 inches. We also created a variable for parent height, which is the average height of both parents. We have a current polygenic score and a future polygenic score. 
+```{r}
+head(df)
+```
+
+We want to estimate the utility of the polygenic score. And to estimate how this clinical utility is expected to improve as the polygenic score becomes more predictive. The current polygenic score is based on >5M samples (Yengo et al., 2022) with $R^2$ of 40%, whereas the estimated heritability of height(based on the upper bound of height prediction) is around 80%. HAPR combines these heritability estimates with the current correlations to estimate a model of the future polygenic score.
+
+The main estimation function is `hapr()`.
+
+```{r, include = TRUE}
+covariates <- df |> select(parent_height) # Covariates
+hapr_fit <- hapr(
+  y = df$height, # Outcome
+  gc = df$prs_observed, # Polygenic score
+  w = covariates, # Covariates
+  model_type = "lm",
+  r2_current = 0.4, # Current R-squared of the polygenic score
+  r2_future = 0.8 # Future R-squared of the polygenic score, estimate of heritability
+)
+print(hapr_fit)
+```
+
+Behind the scenes, `hapr()` run a feasible probit regression of ASCVD on the polygenic score and covariates. It then combines this with heritability estimates to estimate the "true model" of how height is predicted by the true polygenic score. The reported `beta` is the coefficient of the true polygenic score.
+
+It is intuitive to see what is going on if we simulate the full model with the true polygenic score:
+
+```{r}
+simulated_data <- hapr_simulate(hapr_fit, covariates)
+
+head(simulated_data)
+```
+
+The `simulated_data` contains the true polygenic score, the observed polygenic score, and the outcome. This is the dream dataset we would like to have to evaluate the utility of the polygenic score. Moreover, with the predict function, we can add the predictions from each model to the data.
+
+```{r}
+height_dataset <- predict(hapr_fit, simulated_data)
+head(height_dataset)
+```
+
+We can now compare how the current and future polygenic scores add value relative to the traditional measurements used to model height. One simple way are scatterplots of the height using the polygenic score vs the height using the traditional factors(parent height). If the polygenic score adds little extra value, we should see the points clustered around the diagonal.
+
+```{r}
+ggplot(height_dataset, aes(x = y_hat_w, y = y_hat_gc_w)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  coord_fixed(ratio = 1) +  # Ensures 1:1 aspect ratio
+  theme_minimal() +
+  labs(x = "Predicted height using traditional factors", 
+       y = "Predicted height using current polygenic score")
+
+# Plot for future height
+ggplot(height_dataset, aes(x = y_hat_w, y = y_hat_gf_w)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  coord_fixed(ratio = 1) +  # Ensures 1:1 aspect ratio
+  theme_minimal() +
+  labs(x = "Predicted height using traditional factors", 
+       y = "Predicted height using future polygenic score")
+```
