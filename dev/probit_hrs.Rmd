@@ -54,16 +54,16 @@ print(hapr_fit)
 That was easy! Behind the scenes, `hapr()` run a feasible probit regression of CAD on the polygenic score and covariates. It then combines this with heritability estimates to estimate the "true model" of how CAD is predicted by the true polygenic score. The reported `beta` is the coefficient of the true polygenic score.
 
 It is intuitive to see what is going on if we simulate the full model with the true polygenic score:
-```{r, echo=FALSE}
+```{r}
 simulated_data <- hapr_simulate(hapr_fit, covariates)
-head(simulated_data)
+summary(simulated_data)
 ```
 
 The `simulated_data` contains the true polygenic score, the observed polygenic score, and the outcome. This is the dream dataset we would like to have to evaluate the utility of the polygenic score. Moreover, with the predict function, we can add the predictions from each model to the data.
 
 ```{r}
 risk_dataset <- predict(hapr_fit, simulated_data)
-head(risk_dataset)
+summary(risk_dataset)
 ```
 
 We can now compare how the current and future polygenic scores add value relative to the traditional risk factors. One simple way are scatterplots of the predicted risk using the polygenic score vs the predicted risk using the traditional risk factors. If the polygenic score adds little extra value, we should see the points clustered around the diagonal.
