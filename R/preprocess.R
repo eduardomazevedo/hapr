@@ -50,6 +50,17 @@ preprocess <- function(y, gc, w, model_type) {
     }
   }
 
+  # Ensure no N/A values are being supplied to the HAPR function.
+  if (sum(is.na(y))>0) {
+    stop("There are N/A values in the outcome variable you are sending to HAPR.")
+  }
+  if (sum(is.na(gc))>0) {
+    stop("There are N/A values in the polygenic scores you are sending to HAPR.")
+  }
+  if (sum(is.na(w))>0) {
+    stop("There are N/A values in the covariates you are sending to HAPR.")
+  }
+  
   # Handle missing values
   complete_cases <- complete.cases(y, gc, w)
   y <- y[complete_cases]
@@ -76,6 +87,7 @@ preprocess <- function(y, gc, w, model_type) {
   if (any(names(w) %in% c("gc", "gf"))) {
     stop("w must not have variables called gc or gf")
   }
+
 
   list(y = y, gc = gc, w = w)
 }
