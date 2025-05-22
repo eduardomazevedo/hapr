@@ -1,5 +1,5 @@
 ---
-title: "HAPR probit HRS Data"
+title: "Using the HAPR Model With Health and Retirement Study Data"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{HAPR probit HRS Data}
@@ -7,6 +7,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+
+We have a vignette in this repo probit.Rmd, which has a basic probit model with random data generated. That gives a great introduction. This page will be created with real data from HRS(Health and Retirement Study) data (https://hrs.isr.umich.edu/). This is a longitudinal panel study that surveys a representative sample of approximately 20,000 people in America, supported by the National Institute on Aging (NIA U01AG009740) and the Social Security Administration.
 ```{r, include = FALSE}
 library(tidyverse)
 devtools::load_all()
@@ -20,13 +22,17 @@ hrs_full<-merge(x = hrs_data, y = hrs_data_person, by = "id", all.x = TRUE)
 hrs_na_omit <- na.omit(hrs_full |> select(heart_problem,prs_cad,wave,age,bmi,smoking, total_wealth,cholesterol))
 ```
 
-A polygenic score (PGS) aggregates millions of individual loci across the human genome and weights them by the strength of their association to produce a single quantitative measure of genetic risk. We are using a dataset for HRS respondents who provided salivary DNA between 2006 and 2012. We observe disease status (CAD/heart problem) and a polygenic score. We also have covariates: wave, age, bmi, cholesterol, and wealth. In this data, we are restricting values to those where no covariates have N/A values.
 
-```{r, echo=FALSE}
+```{r}
+summary(hrs_na_omit)
+```
+This is a summary of the HRS data. We are using a dataset for HRS respondents who provided salivary DNA between 2006 and 2012. The variable heart_problem shows whether the person studied has CAD(Coronary Artery Disease). The prs_cad is the polygenic score for CAD. A polygenic score (PGS) aggregates millions of individual loci across the human genome and weights them by the strength of their association to produce a single quantitative measure of genetic risk. Other covariates here are wave, age, bmi, cholesterol, and wealth. In this data, we are restricting values to those where no fields have N/A values. We will also ignore total_wealth, especially with negative values present. 
 
-model <- glm(hrs_na_omit$heart_problem~(hrs_na_omit$prs_cad+hrs_na_omit$wave+hrs_na_omit$age+hrs_na_omit$bmi+hrs_na_omit$cholesterol+hrs_na_omit$total_wealth),family='binomial')
+```{r}
 
-covariates <- hrs_na_omit |> select(wave,age,bmi,smoking, total_wealth,cholesterol)
+model <- glm(hrs_na_omit$heart_problem~(hrs_na_omit$prs_cad+hrs_na_omit$wave+hrs_na_omit$age+hrs_na_omit$bmi+hrs_na_omit$cholesterol),family='binomial')
+
+covariates <- hrs_na_omit |> select(wave,age,bmi,smoking,cholesterol)
 R2logit<- function(y,model){
     R2<- 1-(model$deviance/model$null.deviance)
     return(R2)
@@ -35,9 +41,7 @@ r2_current_value<-R2logit(hrs_na_omit$heart_problem,model)
 
 ```
 
-We are running the HAPR function here. We calculated the current $R^2$ based on the pseudo $R^2$ calculated by the logistic model of covariates and polygenic score.The estimated heritability of CAD is around 50%. HAPR combines these heritability estimates with the current correlations to estimate a model of the future polygenic score.
-
-The main estimation function is `hapr()`.
+We are running the HAPR function here. We calculated the current $R^2$ based on the pseudo $R^2$ calculated by the logistic model of covariates and polygenic score.The estimated heritability of CAD is around 50%. 
 
 ```{r, echo=FALSE}
 hapr_fit <- hapr(
@@ -51,7 +55,7 @@ hapr_fit <- hapr(
 print(hapr_fit)
 ```
 
-That was easy! Behind the scenes, `hapr()` run a feasible probit regression of CAD on the polygenic score and covariates. It then combines this with heritability estimates to estimate the "true model" of how CAD is predicted by the true polygenic score. The reported `beta` is the coefficient of the true polygenic score.
+The `hapr()` function here runs a feasible probit regression of CAD on the polygenic score and covariates. It then combines this with heritability estimates to estimate the "true model" of how CAD is predicted by the true polygenic score. The reported `beta` is the coefficient of the true polygenic score.
 
 It is intuitive to see what is going on if we simulate the full model with the true polygenic score:
 ```{r}
