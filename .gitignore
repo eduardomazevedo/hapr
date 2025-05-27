@@ -9,3 +9,84 @@ inst/doc
 *.swp
 /doc/
 /Meta/
+
+
+
+# LaTeX temporary files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.nav
+*.snm
+*.vrb
+*.xdv
+*.xml
+*.bcf
+*.bbl-SAVE-ERROR
+*.bcf-SAVE-ERROR
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.DS_Store
+
+# Environment files
+.env
+*.code-workspace
+
+# Figures and generated files
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.eps
+*.svg
+
+# Data files
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.json
+*.rds
+*.RData
+*.tar.gz
+
+# Remotes
+data/
+output/
+output_hrs/
+download_rap/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# R-related files
+.Rhistory
+.RData
+.Rproj.user/
+
+# data folders
+data/
+output/
+
+# renv
+renv/library/
+renv/staging/
+renv/python/
+
+# Snakemake
+.snakemake/
