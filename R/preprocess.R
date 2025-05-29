@@ -54,10 +54,10 @@ preprocess <- function(y, gc, w, model_type) {
   if (any(is.na(y))) {
     stop("There are N/A values in the outcome variable you are sending to HAPR.")
   }
-  if (any(is.na(y))) {
+  if (any(is.na(gc))) {
     stop("There are N/A values in the polygenic scores you are sending to HAPR.")
   }
-  if (any(is.na(y))) {
+  if (any(is.na(w))) {
     stop("There are N/A values in the covariates you are sending to HAPR.")
   }
   

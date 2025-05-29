@@ -91,11 +91,55 @@ test_that("preprocess handles missing values", {
   gc[6:10] <- NA
   w$x1[11:15] <- NA
 
-  result <- preprocess(y, gc, w, model_type = "lm")
+  expect_error(
+    preprocess(y, gc, w, model_type = "lm"),
+    "There are N/A values in the outcome variable you are sending to HAPR."
+  )
+})
 
-  expect_equal(length(result$y), n - 15)
-  expect_equal(length(result$gc), n - 15)
-  expect_equal(nrow(result$w), n - 15)
+test_that("preprocess handles missing values 2", {
+  set.seed(123)
+  n <- 100
+  y <- rnorm(n)
+  gc <- rnorm(n)
+  w <- data.frame(x1 = rnorm(n), x2 = rnorm(n))
+  
+  y[1:5] <- NA
+  
+  expect_error(
+    preprocess(y, gc, w, model_type = "lm"),
+    "There are N/A values in the outcome variable you are sending to HAPR."
+  )
+})
+
+test_that("preprocess handles missing values polygenic score", {
+  set.seed(123)
+  n <- 100
+  y <- rnorm(n)
+  gc <- rnorm(n)
+  w <- data.frame(x1 = rnorm(n), x2 = rnorm(n))
+  
+  gc[1:5] <- NA
+  
+  expect_error(
+    preprocess(y, gc, w, model_type = "lm"),
+    "There are N/A values in the polygenic scores you are sending to HAPR."
+  )
+})
+
+test_that("preprocess handles missing values covariates", {
+  set.seed(123)
+  n <- 100
+  y <- rnorm(n)
+  gc <- rnorm(n)
+  w <- data.frame(x1 = rnorm(n), x2 = rnorm(n))
+  
+  w$x1[3:5] <- NA
+  
+  expect_error(
+    preprocess(y, gc, w, model_type = "lm"),
+    "There are N/A values in the covariates you are sending to HAPR."
+  )
 })
 
 test_that("preprocess throws an error for invalid model_type", {
@@ -142,7 +186,7 @@ test_that("preprocess throws an error when lengths do not match", {
 
   expect_error(
     preprocess(y, gc, w, model_type = "lm"),
-    "not all arguments have the same length"
+    "y, gc, and w must have the same number of observations"
   )
 })
 
