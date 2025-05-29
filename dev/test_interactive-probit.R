@@ -5,7 +5,7 @@ library(tidyverse)
 library(listviewer)
 
 # Create fake data
-n <- 1e4
+n <- 1e5
 
 var_v <- 1 / 3
 var_epsilon <- 1 / 3
