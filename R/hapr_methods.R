@@ -99,6 +99,8 @@ summary.hapr_fit <- function(object, ...) {
     names(param_hat) <- c(names(gamma_hat), names(theta_hat))
     colnames(vcov_full) <- rownames(vcov_full) <- names(param_hat)
     
+    model_type <- object$model_type  # use passed-in object
+    posterior <- object$stats$posterior
     beta_from_params <- function(params) {
       gamma <- params[1:ng]
       theta <- params[(ng + 1):(ng + nt)]
@@ -107,16 +109,27 @@ summary.hapr_fit <- function(object, ...) {
       i_gc <- which(names(gamma) == "gc")
       i_other <- which(names(gamma) != "gc")
       
-      sqrt_input <- posterior$a^2 - (gamma[i_gc]^2) * (posterior$c^2)
-      if (sqrt_input < 0) stop("Invalid posterior: sqrt_input < 0")
-      
-      beta_gc <- gamma[i_gc] / sqrt(sqrt_input)
-      beta[i_gc] <- beta_gc
-      
-      beta[i_other] <- 
-        gamma[i_other] * sqrt(1 + (posterior$c^2) * beta_gc^2) -
-        posterior$b * theta * beta_gc
-      
+      if (model_type == "lm") {
+        beta_gc <- gamma[i_gc] / posterior$a
+        beta[i_gc] <- beta_gc
+        beta[i_other] <- gamma[i_other] - posterior$b * theta * beta_gc
+      }
+      # probit models
+      else if (model_type == "probit") {
+        sqrt_input <- posterior$a^2 - (gamma[i_gc]^2) * (posterior$c^2)
+        if (sqrt_input < 0) stop("Invalid posterior: sqrt_input < 0")
+        
+        beta_gc <- gamma[i_gc] / sqrt(sqrt_input)
+        beta[i_gc] <- beta_gc
+        
+        beta[i_other] <- 
+          gamma[i_other] * sqrt(1 + (posterior$c^2) * beta_gc^2) -
+          posterior$b * theta * beta_gc
+      }
+      # For cox or other unimplemented models
+      else {
+        stop("Delta method not yet implemented for model_type = ", model_type)
+      }
       names(beta)[i_gc] <- "gf"
       beta
     }
