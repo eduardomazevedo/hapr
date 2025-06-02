@@ -80,6 +80,57 @@ summary.hapr_fit <- function(object, ...) {
     r2_current_source = object$stats$r2_current_source,
     posterior = object$stats$posterior
   )
+  
+  # --- Compute standard deviation of beta via delta method ---
+  if (requireNamespace("numDeriv", quietly = TRUE)) {
+    gamma_hat <- object$coefficients$gamma
+    theta_hat <- object$coefficients$theta
+    vcov_gamma <- object$coefficients$vcov_gamma
+    vcov_theta <- object$coefficients$vcov_theta
+    posterior <- object$stats$posterior
+    
+    param_hat <- c(gamma_hat, theta_hat)
+    ng <- length(gamma_hat)
+    nt <- length(theta_hat)
+    
+    vcov_full <- matrix(0, length(param_hat), length(param_hat))
+    vcov_full[1:ng, 1:ng] <- vcov_gamma
+    vcov_full[(ng + 1):(ng + nt), (ng + 1):(ng + nt)] <- vcov_theta
+    names(param_hat) <- c(names(gamma_hat), names(theta_hat))
+    colnames(vcov_full) <- rownames(vcov_full) <- names(param_hat)
+    
+    beta_from_params <- function(params) {
+      gamma <- params[1:ng]
+      theta <- params[(ng + 1):(ng + nt)]
+      
+      beta <- gamma
+      i_gc <- which(names(gamma) == "gc")
+      i_other <- which(names(gamma) != "gc")
+      
+      sqrt_input <- posterior$a^2 - (gamma[i_gc]^2) * (posterior$c^2)
+      if (sqrt_input < 0) stop("Invalid posterior: sqrt_input < 0")
+      
+      beta_gc <- gamma[i_gc] / sqrt(sqrt_input)
+      beta[i_gc] <- beta_gc
+      
+      beta[i_other] <- 
+        gamma[i_other] * sqrt(1 + (posterior$c^2) * beta_gc^2) -
+        posterior$b * theta * beta_gc
+      
+      names(beta)[i_gc] <- "gf"
+      beta
+    }
+    
+    J <- numDeriv::jacobian(beta_from_params, param_hat)
+    vcov_beta <- J %*% vcov_full %*% t(J)
+    sd_beta <- sqrt(diag(vcov_beta))
+    names(sd_beta) <- names(object$coefficients$beta)
+    
+    result$sd_beta <- sd_beta
+  } else {
+    warning("Package 'numDeriv' is required to compute sd_beta but is not installed.")
+    result$sd_beta <- NA
+  }
 
   # Add model-specific information
   if (object$model_type == "cox" && !is.null(object$additional_parameters$base_hazard_conversion_ratio)) {
@@ -110,6 +161,12 @@ print.summary.hapr_fit <- function(x, ...) {
   print(data.frame(Estimate = x$beta), digits = 4)
   cat("\n")
 
+  if (!is.null(x$sd_beta)) {
+    cat("Standard errors (delta method):\n")
+    print(data.frame(Std.Error = x$sd_beta), digits = 4)
+    cat("\n")
+  }
+  
   cat("Gamma coefficients (current PRS effects):\n")
   print(data.frame(Estimate = x$gamma), digits = 4)
   cat("\n")
@@ -161,3 +218,4 @@ print.summary.hapr_fit <- function(x, ...) {
 
   invisible(x)
 }
+
