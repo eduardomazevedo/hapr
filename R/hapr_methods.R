@@ -140,6 +140,17 @@ summary.hapr_fit <- function(object, ...) {
     names(sd_beta) <- names(object$coefficients$beta)
     
     result$sd_beta <- sd_beta
+    # 95% confidence intervals
+    z <- qnorm(0.975)
+    ci_lower <- result$beta - z * sd_beta
+    ci_upper <- result$beta + z * sd_beta
+    
+    result$ci_beta <- data.frame(
+      Estimate = result$beta,
+      Std.Error = sd_beta,
+      Lower = ci_lower,
+      Upper = ci_upper
+    )
   } else {
     warning("Package 'numDeriv' is required to compute sd_beta but is not installed.")
     result$sd_beta <- NA
@@ -179,7 +190,11 @@ print.summary.hapr_fit <- function(x, ...) {
     print(data.frame(Std.Error = x$sd_beta), digits = 4)
     cat("\n")
   }
-  
+  if (!is.null(x$ci_beta)) {
+    cat("95% Confidence Intervals for Beta (delta method):\n")
+    print(x$ci_beta, digits = 4)
+    cat("\n")
+  }
   cat("Gamma coefficients (current PRS effects):\n")
   print(data.frame(Estimate = x$gamma), digits = 4)
   cat("\n")
