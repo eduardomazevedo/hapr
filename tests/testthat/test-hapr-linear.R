@@ -150,3 +150,60 @@ test_that("hapr print output is stable (linear)", {
   # Capture stable printed output
   expect_snapshot(print(fit))
 })
+
+# Testing 95% confidence interval
+test_that("hapr confidence intervals for beta achieve ~95% coverage (linear)", {
+  set.seed(123)
+  n <- 1e4
+  var_v <- 1 / 3
+  var_epsilon <- 1 / 3
+  var_thetaw <- 1 / 3
+  true_improvement_ratio <- 1 / (1 - var_epsilon)
+  
+  data <- simulate_mock_dataset(
+    n = n,
+    var_v = var_v,
+    var_epsilon = var_epsilon,
+    var_thetaw = var_thetaw
+  )
+  
+  fit <- hapr(
+    y = data$y,
+    gc = data$gc,
+    w = data$w,
+    model_type = "lm",
+    improvement_ratio = true_improvement_ratio
+  )
+  
+  beta_true <- fit$coefficients$beta
+  beta_names <- names(beta_true)
+  
+  n_sim <- 1000
+  covered_matrix <- matrix(NA, nrow = n_sim, ncol = length(beta_true))
+  colnames(covered_matrix) <- beta_names
+  
+  check_coverage <- function(fit_sim, beta_true) {
+    ci <- fit_sim$ci_beta
+    ci <- ci[beta_names, , drop = FALSE]
+    (beta_true >= ci$Lower) & (beta_true <= ci$Upper)
+  }
+  
+  for (i in 1:n_sim) {
+    sim_data <- hapr_simulate(fit, w = data$w)
+    
+    # Regenerate y using the known linear model
+    y_sim <- 0.42 * sim_data$gf + rnorm(n) + 0.17 * sim_data$w1
+    gc_sim <- sim_data$gc
+    w_sim <- sim_data %>% select(all_of(names(data$w)))
+    
+    fit_sim <- hapr(y_sim, gc_sim, w_sim, model_type = "lm", improvement_ratio = true_improvement_ratio)
+    covered_matrix[i, ] <- check_coverage(fit_sim, beta_true)
+  }
+  
+  coverage_df <- colMeans(covered_matrix, na.rm = TRUE)
+  print(tibble(Term = beta_names, Coverage = round(coverage_df, 3)))
+  
+  expect_true(all(coverage_df > 0.90 & coverage_df < 0.98),
+              info = paste("Coverage outside expected range:",
+                           paste(names(coverage_df), round(coverage_df, 3), collapse = ", ")))
+})

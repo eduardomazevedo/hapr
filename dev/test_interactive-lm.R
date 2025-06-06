@@ -44,3 +44,40 @@ plot(predicted_w$y_hat_w, predicted_w$y_hat_gc_w)
 plot(predicted_w$y_hat_w, predicted_w$y_hat_gf_w)
 
 print.hapr_fit(fit)
+
+
+# ---- CI coverage test for beta ----
+
+n_sim <- 1000
+true_beta <- fit$coefficients$beta
+beta_names <- names(true_beta)
+covered_matrix <- matrix(NA, nrow = n_sim, ncol = length(true_beta))
+colnames(covered_matrix) <- beta_names
+
+check_coverage <- function(fit_sim, beta_true) {
+  ci <- fit_sim$ci_beta
+  ci <- ci[beta_names, , drop = FALSE]
+  (beta_true >= ci$Lower) & (beta_true <= ci$Upper)
+}
+
+for (i in 1:n_sim) {
+  print(i)
+  
+  # simulate new gf, gc, w
+  sim_data <- hapr_simulate(fit, w = w)
+  
+  # rebuild y using same model logic
+  y_sim <- 0.42 * sim_data$gf + rnorm(n) + 0.17 * sim_data$w1
+  gc_sim <- sim_data$gc
+  w_sim <- sim_data %>% select(all_of(names(w)))
+  
+  stopifnot(length(y_sim) == length(gc_sim), length(gc_sim) == nrow(w_sim))
+  
+  fit_sim <- hapr(y_sim, gc_sim, w_sim, model_type = "lm", improvement_ratio = true_improvement_ratio)
+  covered_matrix[i, ] <- check_coverage(fit_sim, true_beta)
+}
+
+# Summarize empirical coverage
+coverage_df <- colMeans(covered_matrix, na.rm = TRUE) |> round(3)
+print(tibble(Term = beta_names, Coverage = coverage_df))
+
