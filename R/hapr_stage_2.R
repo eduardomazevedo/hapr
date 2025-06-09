@@ -68,7 +68,47 @@ hapr_second_stage <- function(
   posterior <- abc(var_epsilon, var_v)
 
   beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
-
+  
+  # --- Delta method: compute vcov(beta), sd(beta), and 95% CIs ---
+  gamma_hat <- first_stage$coefficients$gamma
+  theta_hat <- first_stage$coefficients$theta
+  vcov_gamma <- first_stage$coefficients$vcov_gamma
+  vcov_theta <- first_stage$coefficients$vcov_theta
+  
+  param_hat <- c(gamma_hat, theta_hat)
+  ng <- length(gamma_hat)
+  nt <- length(theta_hat)
+  
+  vcov_full <- matrix(0, ng + nt, ng + nt)
+  vcov_full[1:ng, 1:ng] <- vcov_gamma
+  vcov_full[(ng + 1):(ng + nt), (ng + 1):(ng + nt)] <- vcov_theta
+  names(param_hat) <- c(names(gamma_hat), names(theta_hat))
+  rownames(vcov_full) <- colnames(vcov_full) <- names(param_hat)
+  
+  # Wrapper to pass into jacobian
+  beta_wrapper <- function(params) {
+    gamma <- params[1:ng]
+    theta <- params[(ng + 1):(ng + nt)]
+    calculate_beta(first_stage$model_type,
+                   coefficients = list(gamma = gamma, theta = theta),
+                   posterior = posterior)
+  }
+  
+  # Delta method: J, vcov_beta, sd_beta
+  J <- numDeriv::jacobian(beta_wrapper, param_hat)
+  vcov_beta <- J %*% vcov_full %*% t(J)
+  sd_beta <- sqrt(diag(vcov_beta))
+  names(sd_beta) <- names(beta)
+  
+  # 95% CI
+  z <- qnorm(0.975)
+  ci_beta <- data.frame(
+    Estimate = beta,
+    Std.Error = sd_beta,
+    Lower = beta - z * sd_beta,
+    Upper = beta + z * sd_beta
+  )
+  
   # Update stripped model
   first_stage$regressions$y_on_gf_w$stripped_model$coefficients <- beta
   first_stage$regressions$y_on_gc_w$coefficients <- beta
@@ -104,6 +144,9 @@ hapr_second_stage <- function(
     model_type = first_stage$model_type,
     regressions = first_stage$regressions,
     coefficients = c(first_stage$coefficients, list(beta = beta)),
+    standard_errors = sd_beta,
+    vcov_beta = vcov_beta,
+    ci_beta = ci_beta,
     additional_parameters = additional_parameters,
     stats = c(first_stage$stats, list(
       var_v = var_v,

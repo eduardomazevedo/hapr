@@ -80,6 +80,24 @@ summary.hapr_fit <- function(object, ...) {
     r2_current_source = object$stats$r2_current_source,
     posterior = object$stats$posterior
   )
+  
+  result <- list(
+    model_type = object$model_type,
+    beta = object$coefficients$beta,
+    sd_beta = object$standard_errors,
+    ci_beta = object$ci_beta,
+    gamma = object$coefficients$gamma,
+    theta = object$coefficients$theta,
+    var_v = object$stats$var_v,
+    var_epsilon = object$stats$var_epsilon,
+    improvement_ratio = object$stats$improvement_ratio,
+    max_improvement_ratio = object$stats$max_improvement_ratio,
+    r2_current = object$stats$r2_current,
+    r2_future = object$stats$r2_future,
+    heritability_source = object$stats$heritability_source,
+    r2_current_source = object$stats$r2_current_source,
+    posterior = object$stats$posterior
+  )
 
   # Add model-specific information
   if (object$model_type == "cox" && !is.null(object$additional_parameters$base_hazard_conversion_ratio)) {
@@ -110,6 +128,16 @@ print.summary.hapr_fit <- function(x, ...) {
   print(data.frame(Estimate = x$beta), digits = 4)
   cat("\n")
 
+  if (!is.null(x$sd_beta)) {
+    cat("Standard errors (delta method):\n")
+    print(data.frame(Std.Error = x$sd_beta), digits = 4)
+    cat("\n")
+  }
+  if (!is.null(x$ci_beta)) {
+    cat("95% Confidence Intervals for Beta (delta method):\n")
+    print(x$ci_beta, digits = 4)
+    cat("\n")
+  }
   cat("Gamma coefficients (current PRS effects):\n")
   print(data.frame(Estimate = x$gamma), digits = 4)
   cat("\n")
@@ -161,3 +189,4 @@ print.summary.hapr_fit <- function(x, ...) {
 
   invisible(x)
 }
+
