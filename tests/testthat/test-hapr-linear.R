@@ -238,7 +238,6 @@ test_that("hapr confidence intervals for beta achieve exact match coverage (line
   
   print(coverage_df)
   
-  # Expectation (soft bound only if test enforced)
   expect_true(all(coverage_df$Coverage > 0.90),
               info = paste("Coverage below threshold:\n",
                            paste(coverage_df$Term, coverage_df$Coverage, collapse = "\n")))
