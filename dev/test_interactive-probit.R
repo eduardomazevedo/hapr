@@ -1,126 +1,137 @@
 # Create a small interactive test for hapr_probit
-set.seed(123) # For reproducibility
+set.seed(123)
 devtools::load_all()
 library(tidyverse)
 library(listviewer)
 
-# Create fake data
-n <- 1e5
-
-var_v <- 1 / 3
-var_epsilon <- 1 / 3
-var_thetaw <- 1 / 3
-
-true_improvement_ratio <- 1 / (1 - var_epsilon)
-
-w <- data.frame(
-  w1 = rnorm(n),
-  w2 = factor(sample(c("A", "B", "C"), n, replace = TRUE))
+# ---- Part 1: Data generation ----
+default_params <- list(
+  n = 1e4,
+  var_v = 1 / 3,
+  var_epsilon = 1 / 3,
+  var_thetaw = 1 / 3,
+  beta_gf = 0.42,
+  beta_w1 = 0.17,
+  seed = 123
 )
 
-v <- rnorm(n) * sqrt(var_v)
-epsilon <- rnorm(n) * sqrt(var_epsilon)
+create_simulated_dataset <- function(params = list()) {
+  p <- modifyList(default_params, params)
+  set.seed(p$seed)
+  
+  n <- p$n
+  var_v <- p$var_v
+  var_epsilon <- p$var_epsilon
+  var_thetaw <- p$var_thetaw
+  beta_gf <- p$beta_gf
+  beta_w1 <- p$beta_w1
+  
+  true_improvement_ratio <- 1 / (1 - var_epsilon)
+  
+  w <- data.frame(
+    w1 = rnorm(n),
+    w2 = factor(sample(c("A", "B", "C"), n, replace = TRUE))
+  )
+  
+  v <- rnorm(n) * sqrt(var_v)
+  epsilon <- rnorm(n) * sqrt(var_epsilon)
+  gf <- w$w1 * sqrt(var_thetaw) + v
+  gc <- gf + epsilon
+  gc_normalized <- scale(gc) |> as.numeric()
+  
+  latent <- beta_gf * gf + rnorm(n) + beta_w1 * w$w1
+  y <- as.factor(as.numeric(latent > 0))
+  
+  list(
+    y = y,
+    gc_normalized = gc_normalized,
+    w = w,
+    gf = gf,
+    gc = gc,
+    v = v,
+    epsilon = epsilon,
+    true_improvement_ratio = true_improvement_ratio
+  )
+}
 
-gf <- w$w1 * sqrt(var_thetaw) + v
-gc <- gf + epsilon
-gc_normalized <- scale(gc) |> as.numeric()
+# ---- Part 2: Fit once to get "true" betas ----
+sim_data <- create_simulated_dataset()
+y <- sim_data$y
+gc_normalized <- sim_data$gc_normalized
+w <- sim_data$w
+true_improvement_ratio <- sim_data$true_improvement_ratio
 
-y <- 0.42 * gf + rnorm(n) + 0.17 * w$w1
-
-y_binary <- as.numeric(y > mean(y)) |> as.factor()
-
-# Call with generic hapr function
-fit <- hapr(y_binary, gc_normalized, w, model_type = "probit", improvement_ratio = 1.5)
-
-print(fit$coefficients$beta)
-
-simulated_w <- hapr_simulate(fit, w = w) |> as_tibble()
-simulated_w_gc <- hapr_simulate(fit, w = w, gc = gc_normalized) |> as_tibble()
-
-# Test predict
-predicted_w <- predict(fit, newdata = simulated_w)
-
-plot(predicted_w$y_hat_w, predicted_w$y_hat_w)
-plot(predicted_w$y_hat_w, predicted_w$y_hat_gc_w)
-plot(predicted_w$y_hat_w, predicted_w$y_hat_gf_w)
-
-# Create a small interactive test for hapr_probit
-set.seed(123) # For reproducibility
-devtools::load_all()
-library(tidyverse)
-library(listviewer)
-
-# Create fake data
-n <- 1e5
-
-var_v <- 1 / 3
-var_epsilon <- 1 / 3
-var_thetaw <- 1 / 3
-
-true_improvement_ratio <- 1 / (1 - var_epsilon)
-
-w <- data.frame(
-  w1 = rnorm(n),
-  w2 = factor(sample(c("A", "B", "C"), n, replace = TRUE))
-)
-
-v <- rnorm(n) * sqrt(var_v)
-epsilon <- rnorm(n) * sqrt(var_epsilon)
-
-gf <- w$w1 * sqrt(var_thetaw) + v
-gc <- gf + epsilon
-gc_normalized <- scale(gc) |> as.numeric()
-
-y <- 0.42 * gf + rnorm(n) + 0.17 * w$w1
-
-y_binary <- as.numeric(y > mean(y)) |> as.factor()
-
-# Call with generic hapr function
-fit <- hapr(y_binary, gc_normalized, w, model_type = "probit", improvement_ratio = 1.5)
-
-print(fit$coefficients$beta)
-
-simulated_w <- hapr_simulate(fit, w = w) |> as_tibble()
-simulated_w_gc <- hapr_simulate(fit, w = w, gc = gc_normalized) |> as_tibble()
-
-# Test predict
-predicted_w <- predict(fit, newdata = simulated_w)
-
-plot(predicted_w$y_hat_w, predicted_w$y_hat_w)
-plot(predicted_w$y_hat_w, predicted_w$y_hat_gc_w)
-plot(predicted_w$y_hat_w, predicted_w$y_hat_gf_w)
-
-# ---- CI coverage test for beta ----
-
-n_sim <- 1000
+fit <- hapr(y, gc_normalized, w, model_type = "probit", improvement_ratio = true_improvement_ratio)
 true_beta <- fit$coefficients$beta
 beta_names <- names(true_beta)
-covered_matrix <- matrix(NA, nrow = n_sim, ncol = length(true_beta))
+
+# ---- Part 3: Empirical CI coverage for all coefficients ----
+n_sim <- 1000
+covered_matrix <- matrix(NA, nrow = n_sim, ncol = length(beta_names))
 colnames(covered_matrix) <- beta_names
 
-check_coverage <- function(fit_sim, beta_true) {
-  ci <- fit_sim$ci_beta
-  (beta_true >= ci$Lower) & (beta_true <= ci$Upper)
-}
+fitted_beta_mat <- matrix(NA, nrow = n_sim, ncol = length(beta_names))
+colnames(fitted_beta_mat) <- beta_names
 
 for (i in 1:n_sim) {
-  print(i)
-  sim_data <- hapr_simulate(fit, w = w)
+  if (i %% 50 == 0) cat("Simulation", i, "\n")
   
-  # Reconstruct y from sim_data$gf using the original model
-  y_continuous <- 0.42 * sim_data$gf + rnorm(n) + 0.17 * sim_data$w1
-  y_sim <- factor(y_continuous > mean(y_continuous), levels = c(FALSE, TRUE))
+  sim_data_bs <- create_simulated_dataset(params = list(seed = i))
   
-  gc_sim <- sim_data$gc
-  w_sim <- sim_data %>% select(all_of(names(w)))
+  fit_bs <- hapr(
+    y = sim_data_bs$y,
+    gc = sim_data_bs$gc,
+    w = sim_data_bs$w,
+    model_type = "probit",
+    improvement_ratio = sim_data_bs$true_improvement_ratio
+  )
   
-  stopifnot(length(y_sim) == length(gc_sim), length(gc_sim) == nrow(w_sim))
+  beta_hat <- fit_bs$coefficients$beta
+  ci_beta <- fit_bs$ci_beta
   
-  fit_sim <- hapr(y_sim, gc_sim, w_sim, model_type = "probit", improvement_ratio = 1.5)
-  
-  covered_matrix[i, ] <- check_coverage(fit_sim, true_beta)
+  for (term in beta_names) {
+    ci_lower <- ci_beta[term, "Lower"]
+    ci_upper <- ci_beta[term, "Upper"]
+    covered_matrix[i, term] <- (true_beta[term] >= ci_lower) & (true_beta[term] <= ci_upper)
+    fitted_beta_mat[i, term] <- beta_hat[term]
+  }
 }
 
-coverage_df <- colMeans(covered_matrix, na.rm = TRUE) |> round(3)
-print(tibble(Term = beta_names, Coverage = coverage_df))
+# ---- Part 4: Summary and histogram ----
+coverage_df <- tibble(
+  Term = beta_names,
+  Coverage = round(colMeans(covered_matrix, na.rm = TRUE), 3)
+)
+print(coverage_df)
 
+for (term in beta_names) {
+  estimates <- fitted_beta_mat[, term]
+  ci_lower <- as.numeric(fit$ci_beta[term, "Lower"])
+  ci_upper <- as.numeric(fit$ci_beta[term, "Upper"])
+  true_val <- true_beta[term]
+  
+  buffer <- 0.05 * (max(estimates) - min(estimates))
+  x_min <- min(min(estimates), ci_lower) - buffer
+  x_max <- max(max(estimates), ci_upper) + buffer
+  
+  hist(estimates,
+       breaks = 30,
+       main = paste("Sampling Distribution of Beta:", term),
+       xlab = paste("Estimated beta:", term),
+       col = "lightblue",
+       border = "white",
+       xlim = c(x_min, x_max))
+  
+  abline(v = ci_lower, col = "red", lwd = 2)
+  abline(v = ci_upper, col = "red", lwd = 2)
+  abline(v = true_val, col = "blue", lwd = 2, lty = 2)
+  
+  legend("topright",
+         legend = c("CI Lower (delta)", "CI Upper (delta)", "True beta"),
+         col = c("red", "red", "blue"),
+         lty = c(1, 1, 2),
+         lwd = 2,
+         bty = "n")
+  
+  if (interactive()) readline(prompt = "Press [Enter] to continue...")
+}

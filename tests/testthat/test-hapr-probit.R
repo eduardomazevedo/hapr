@@ -150,3 +150,101 @@ test_that("hapr print output is stable (probit)", {
   
   expect_snapshot(print(fit))
 })
+
+test_that("hapr confidence intervals for beta achieve exact match coverage (probit)", {
+  # ---- Part 1: Configuration ----
+  default_params <- list(
+    n = 1e4,
+    var_v = 1 / 3,
+    var_epsilon = 1 / 3,
+    var_thetaw = 1 / 3,
+    beta_gf = 0.42,
+    beta_w1 = 0.17,
+    seed = 123
+  )
+  
+  create_simulated_dataset <- function(params = list()) {
+    p <- modifyList(default_params, params)
+    set.seed(p$seed)
+    
+    n <- p$n
+    var_v <- p$var_v
+    var_epsilon <- p$var_epsilon
+    var_thetaw <- p$var_thetaw
+    beta_gf <- p$beta_gf
+    beta_w1 <- p$beta_w1
+    
+    true_improvement_ratio <- 1 / (1 - var_epsilon)
+    
+    w <- data.frame(
+      w1 = rnorm(n),
+      w2 = factor(sample(c("A", "B", "C"), n, replace = TRUE))
+    )
+    
+    v <- rnorm(n) * sqrt(var_v)
+    epsilon <- rnorm(n) * sqrt(var_epsilon)
+    gf <- w$w1 * sqrt(var_thetaw) + v
+    gc <- gf + epsilon
+    gc_normalized <- scale(gc) |> as.numeric()
+    
+    latent <- beta_gf * gf + rnorm(n) + beta_w1 * w$w1
+    y <- as.factor(as.numeric(latent > 0))
+    
+    list(
+      y = y,
+      gc = gc_normalized,
+      w = w,
+      gf = gf,
+      true_improvement_ratio = true_improvement_ratio
+    )
+  }
+  
+  # ---- Part 2: Fit once to get true beta ----
+  sim_data <- create_simulated_dataset()
+  fit <- hapr(sim_data$y, sim_data$gc, sim_data$w,
+              model_type = "probit",
+              improvement_ratio = sim_data$true_improvement_ratio)
+  
+  beta_names <- names(fit$coefficients$beta)
+  true_beta <- fit$coefficients$beta
+  
+  n_sim <- 1000
+  covered_matrix <- matrix(NA, nrow = n_sim, ncol = length(beta_names))
+  colnames(covered_matrix) <- beta_names
+  
+  # ---- Part 3: Run simulations ----
+  for (i in 1:n_sim) {
+    if (i %% 50 == 0) cat("Simulation", i, "\n")
+    
+    sim_data_i <- create_simulated_dataset(params = list(seed = i))
+    fit_i <- hapr(
+      y = sim_data_i$y,
+      gc = sim_data_i$gc,
+      w = sim_data_i$w,
+      model_type = "probit",
+      improvement_ratio = sim_data_i$true_improvement_ratio
+    )
+    
+    beta_hat <- fit_i$coefficients$beta
+    ci_beta <- fit_i$ci_beta
+    
+    for (term in beta_names) {
+      ci_lower <- ci_beta[term, "Lower"]
+      ci_upper <- ci_beta[term, "Upper"]
+      covered_matrix[i, term] <- (true_beta[term] >= ci_lower) & (true_beta[term] <= ci_upper)
+    }
+  }
+  
+  # ---- Part 4: Compute coverage ----
+  coverage_df <- tibble(
+    Term = beta_names,
+    Coverage = round(colMeans(covered_matrix), 3)
+  )
+  
+  print(coverage_df)
+  
+  expect_true(all(coverage_df$Coverage > 0.90),
+              info = paste("Coverage below threshold:\n",
+                           paste(coverage_df$Term, coverage_df$Coverage, collapse = "\n")))
+})
+

@@ -69,44 +69,65 @@ hapr_second_stage <- function(
 
   beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
   
-  # --- Delta method: compute vcov(beta), sd(beta), and 95% CIs ---
+  # --- Delta Method: vcov_beta, sd_beta, and CI ---
   gamma_hat <- first_stage$coefficients$gamma
   theta_hat <- first_stage$coefficients$theta
   vcov_gamma <- first_stage$coefficients$vcov_gamma
   vcov_theta <- first_stage$coefficients$vcov_theta
   
+  # Sort and name everything for alignment
+  gamma_hat <- gamma_hat[order(names(gamma_hat))]
+  theta_hat <- theta_hat[order(names(theta_hat))]
+  vcov_gamma <- vcov_gamma[order(rownames(vcov_gamma)), order(colnames(vcov_gamma))]
+  vcov_theta <- vcov_theta[order(rownames(vcov_theta)), order(colnames(vcov_theta))]
+  
   param_hat <- c(gamma_hat, theta_hat)
   ng <- length(gamma_hat)
   nt <- length(theta_hat)
+  names(param_hat) <- c(names(gamma_hat), names(theta_hat))
   
   vcov_full <- matrix(0, ng + nt, ng + nt)
   vcov_full[1:ng, 1:ng] <- vcov_gamma
   vcov_full[(ng + 1):(ng + nt), (ng + 1):(ng + nt)] <- vcov_theta
-  names(param_hat) <- c(names(gamma_hat), names(theta_hat))
   rownames(vcov_full) <- colnames(vcov_full) <- names(param_hat)
   
-  # Wrapper to pass into jacobian
+  # Wrapper that returns a named vector in correct order
   beta_wrapper <- function(params) {
     gamma <- params[1:ng]
     theta <- params[(ng + 1):(ng + nt)]
-    calculate_beta(first_stage$model_type,
-                   coefficients = list(gamma = gamma, theta = theta),
-                   posterior = posterior)
+    names(gamma) <- names(gamma_hat)
+    names(theta) <- names(theta_hat)
+    beta_out <- calculate_beta(
+      first_stage$model_type,
+      list(gamma = gamma, theta = theta),
+      posterior
+    )
+    beta_out[order(names(beta_out))]  # Ensure consistent ordering
   }
   
-  # Delta method: J, vcov_beta, sd_beta
-  J <- numDeriv::jacobian(beta_wrapper, param_hat)
-  vcov_beta <- J %*% vcov_full %*% t(J)
+  # Compute Jacobian
+  J_raw <- numDeriv::jacobian(beta_wrapper, param_hat)
+  rownames(J_raw) <- names(beta_wrapper(param_hat))
+  colnames(J_raw) <- names(param_hat)
+  
+  # Align J and vcov_full to ensure correct matrix multiplication
+  J <- J_raw[match(names(beta), rownames(J_raw)), match(names(param_hat), colnames(J_raw))]
+  vcov_ordered <- vcov_full[match(names(param_hat), rownames(vcov_full)), match(names(param_hat), colnames(vcov_full))]
+  
+  # Final covariance and standard errors
+  vcov_beta <- J %*% vcov_ordered %*% t(J)
   sd_beta <- sqrt(diag(vcov_beta))
   names(sd_beta) <- names(beta)
   
-  # 95% CI
+  # Confidence intervals
   z <- qnorm(0.975)
   ci_beta <- data.frame(
     Estimate = beta,
     Std.Error = sd_beta,
     Lower = beta - z * sd_beta,
-    Upper = beta + z * sd_beta
+    Upper = beta + z * sd_beta,
+    row.names = names(beta),
+    check.names = FALSE
   )
   
   # Update stripped model
@@ -172,32 +193,31 @@ hapr_second_stage <- function(
 calculate_beta <- function(model_type, coefficients, posterior) {
   gamma <- coefficients$gamma
   theta <- coefficients$theta
-  beta <- gamma
-
+  beta <- gamma  # default fallback
+  
   i_gc <- which(names(gamma) == "gc")
   i_other <- which(names(gamma) != "gc")
-
+  
   if (model_type == "lm") {
     beta[i_gc] <- gamma[i_gc] / posterior$a
+    stopifnot(all(names(theta) == names(gamma[i_other])))  # ensure alignment
     beta[i_other] <- gamma[i_other] - beta[i_gc] * posterior$b * theta
+    
   } else if (model_type == "probit") {
     sqrt_input <- posterior$a^2 - (gamma[i_gc]^2) * (posterior$c^2)
-    if (sqrt_input < 0) {
-      stop("Invalid posterior parameters: sqrt_input is negative")
-    }
-
+    if (sqrt_input < 0) stop("Invalid posterior parameters: sqrt_input is negative")
     beta[i_gc] <- gamma[i_gc] / sqrt(sqrt_input)
-    beta[i_other] <- gamma[i_other] * sqrt(1 + (posterior$c^2) * (beta[i_gc]^2)) -
+    beta[i_other] <- gamma[i_other] * sqrt(1 + (posterior$c^2) * beta[i_gc]^2) -
       posterior$b * theta * beta[i_gc]
+    
   } else if (model_type == "cox") {
-    theta_intercept <- theta[1] # Remeber this will matter for the base hazard
-    theta_without_intercept <- theta[-1]
+    theta_intercept <- theta[1]
+    theta_others <- theta[-1]
     beta[i_gc] <- gamma[i_gc] / posterior$a
-    beta[i_other] <- gamma[i_other] - beta[i_gc] * posterior$b * theta_without_intercept
+    beta[i_other] <- gamma[i_other] - beta[i_gc] * posterior$b * theta_others
   }
-
-  # Rename gc to gf
+  
   names(beta)[i_gc] <- "gf"
-
+  beta <- beta[order(names(beta))]
   beta
 }
