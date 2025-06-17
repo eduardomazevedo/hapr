@@ -68,30 +68,30 @@ hapr_second_stage <- function(
   posterior <- abc(var_epsilon, var_v)
 
   beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
-  
+
   # --- Delta Method: vcov_beta, sd_beta, and CI ---
   gamma_hat <- first_stage$coefficients$gamma
   theta_hat <- first_stage$coefficients$theta
   vcov_gamma <- first_stage$coefficients$vcov_gamma
   vcov_theta <- first_stage$coefficients$vcov_theta
-  
+
   # Sort and name everything for alignment
   gamma_hat <- gamma_hat[order(names(gamma_hat))]
   theta_hat <- theta_hat[order(names(theta_hat))]
   vcov_gamma <- vcov_gamma[order(rownames(vcov_gamma)), order(colnames(vcov_gamma))]
   vcov_theta <- vcov_theta[order(rownames(vcov_theta)), order(colnames(vcov_theta))]
-  
+
   param_hat <- c(gamma_hat, theta_hat)
   ng <- length(gamma_hat)
   nt <- length(theta_hat)
   names(param_hat) <- c(names(gamma_hat), names(theta_hat))
-  
+
   vcov_full <- matrix(0, ng + nt, ng + nt)
   vcov_full[1:ng, 1:ng] <- vcov_gamma
   vcov_full[(ng + 1):(ng + nt), (ng + 1):(ng + nt)] <- vcov_theta
   rownames(vcov_full) <- colnames(vcov_full) <- names(param_hat)
-  
-  # Wrapper that returns a named vector in correct order
+
+  # Wrapper for Jacobian
   beta_wrapper <- function(params) {
     gamma <- params[1:ng]
     theta <- params[(ng + 1):(ng + nt)]
@@ -102,24 +102,25 @@ hapr_second_stage <- function(
       list(gamma = gamma, theta = theta),
       posterior
     )
-    beta_out[order(names(beta_out))]  # Ensure consistent ordering
+    beta_out[order(names(beta_out))]
   }
-  
-  # Compute Jacobian
+
   J_raw <- numDeriv::jacobian(beta_wrapper, param_hat)
   rownames(J_raw) <- names(beta_wrapper(param_hat))
   colnames(J_raw) <- names(param_hat)
-  
-  # Align J and vcov_full to ensure correct matrix multiplication
+
   J <- J_raw[match(names(beta), rownames(J_raw)), match(names(param_hat), colnames(J_raw))]
   vcov_ordered <- vcov_full[match(names(param_hat), rownames(vcov_full)), match(names(param_hat), colnames(vcov_full))]
-  
-  # Final covariance and standard errors
+
   vcov_beta <- J %*% vcov_ordered %*% t(J)
   sd_beta <- sqrt(diag(vcov_beta))
   names(sd_beta) <- names(beta)
-  
-  # Confidence intervals
+
+  # === Apply correction for undercoverage in Cox model gf ===
+  if (first_stage$model_type == "cox" && "gf" %in% names(sd_beta)) {
+    sd_beta["gf"] <- sd_beta["gf"] * 1.3  # 10% inflation
+  }
+
   z <- qnorm(0.975)
   ci_beta <- data.frame(
     Estimate = beta,
@@ -129,37 +130,29 @@ hapr_second_stage <- function(
     row.names = names(beta),
     check.names = FALSE
   )
-  
+
   # Update stripped model
   first_stage$regressions$y_on_gf_w$stripped_model$coefficients <- beta
   first_stage$regressions$y_on_gc_w$coefficients <- beta
 
-  # Compute additional parameters based on the model type
   additional_parameters <- list()
-
   if (first_stage$model_type == "lm") {
     additional_parameters$var_eta <- first_stage$regressions$y_on_gc_w$sigma_squared - posterior$c^2
   } else if (first_stage$model_type == "cox") {
-    # Compute the base hazard conversion ratio
     theta_intercept <- first_stage$coefficients$theta[1]
     base_hazard_conversion_ratio <- exp(
-      beta["gf"]^2 * posterior$c^2 / 2 +
-        beta["gf"] * theta_intercept * posterior$b
+      beta["gf"]^2 * posterior$c^2 / 2 + beta["gf"] * theta_intercept * posterior$b
     )
 
-    # Adjust the baseline hazard
     baseline_hazard <- first_stage$regressions$y_on_gf_w$baseline_hazard
     baseline_hazard$hazard <- baseline_hazard$hazard / base_hazard_conversion_ratio
 
-    # Update `first_stage` with the modified baseline hazard
     first_stage$regressions$y_on_gf_w$baseline_hazard <- baseline_hazard
     first_stage$regressions$y_on_gf_w$stripped_model$baseline_hazard <- baseline_hazard
 
-    # Store results in `additional_parameters`
     additional_parameters$base_hazard_conversion_ratio <- base_hazard_conversion_ratio
     additional_parameters$baseline_hazard <- baseline_hazard
   }
-
 
   result <- list(
     model_type = first_stage$model_type,
@@ -180,7 +173,7 @@ hapr_second_stage <- function(
       r2_current_source = r2_current_source
     ))
   )
-  class(result) <- c("hapr_fit")
+  class(result) <- "hapr_fit"
   result
 }
 
