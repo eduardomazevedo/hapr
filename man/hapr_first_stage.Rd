@@ -13,7 +13,7 @@ hapr_first_stage(y, gc, w, model_type)
 
 \item{w}{Control variables}
 
-\item{model_type}{"lm" or "probit"}
+\item{model_type}{"lm", "probit", or "cox"}
 }
 \value{
 A hapr_first_stage_fit object containing the results of the first stage.
