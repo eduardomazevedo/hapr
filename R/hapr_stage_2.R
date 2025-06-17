@@ -118,7 +118,7 @@ hapr_second_stage <- function(
 
   # === Apply correction for undercoverage in Cox model gf ===
   if (first_stage$model_type == "cox" && "gf" %in% names(sd_beta)) {
-    sd_beta["gf"] <- sd_beta["gf"] * 1.3  # 10% inflation
+    sd_beta["gf"] <- sd_beta["gf"] * 1.3  # 30% inflation
   }
 
   z <- qnorm(0.975)
