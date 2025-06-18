@@ -17,3 +17,12 @@ A summary.hapr_fit object containing the summary information
 \description{
 Provides a detailed summary of a hapr_fit object.
 }
+\details{
+For Cox models, the reported standard errors and confidence intervals are based on delta method approximations.
+These may underestimate true uncertainty, especially for the \code{gf} term, due to:
+\itemize{
+\item The use of a partial likelihood (not full likelihood)
+\item Nonlinear transformation of parameters not fully captured by the Jacobian
+}
+For production inference, consider resampling methods such as bootstrap.
+}

@@ -9,6 +9,16 @@
 #' to estimate the improvement ratio. If specifying the r2_future, you can also
 #' specify the r2_current to estimate the improvement ratio. Otherwise, the
 #' r2_current is extracted from the data in the first stage fit.
+#' For the cox model, the confidence intervals and standard errors returned
+#' are based on a delta method approximation using the partial likelihood. These
+#' are known to underestimate the true variance, particularly for the gf coefficient.
+#'
+#' The undercoverage arises due to:
+#' 1. The Cox likelihood is approximate.
+#' 2. The delta method approximation is linear, but the transformation to beta is nonlinear.
+#'
+#' The reported intervals are useful for quick inference, but users seeking higher accuracy
+#' should apply a bootstrap.
 #'
 #' @param first_stage A hapr_first_stage_fit object
 #' @param improvement_ratio The ratio to extrapolate by
@@ -21,17 +31,18 @@ hapr_second_stage <- function(
     improvement_ratio = NULL,
     r2_current = NULL,
     r2_future = NULL) {
+  
   if (!inherits(first_stage, "hapr_first_stage_fit")) {
     stop("first_stage must be a hapr_first_stage_fit object.")
   }
-
+  
   if (is.null(improvement_ratio) && is.null(r2_future)) {
     stop("Either improvement_ratio or r2_future must be specified.")
   }
   if (!is.null(improvement_ratio) && !is.null(r2_future)) {
     stop("Only one of improvement_ratio or r2_future should be provided.")
   }
-
+  
   if (is.null(r2_current)) {
     r2_current_source <- "first_stage"
     r2_current <- first_stage$regressions$y_on_gc$r2 |> as.numeric()
@@ -42,7 +53,7 @@ hapr_second_stage <- function(
   } else {
     r2_current_source <- "user_provided"
   }
-
+  
   if (is.null(r2_future)) {
     heritability_source <- "improvement_ratio"
     r2_future <- improvement_ratio * r2_current
@@ -53,74 +64,65 @@ hapr_second_stage <- function(
     heritability_source <- "r2_future"
     improvement_ratio <- r2_future / r2_current
   }
-
+  
   if (improvement_ratio >= first_stage$stats$max_improvement_ratio) {
-    stop(
-      sprintf(
-        "Improvement ratio must be less than %s.",
-        first_stage$stats$max_improvement_ratio
-      )
-    )
+    stop(sprintf("Improvement ratio must be less than %s.",
+                 first_stage$stats$max_improvement_ratio))
   }
-
+  
   var_epsilon <- 1 - 1 / improvement_ratio
   var_v <- first_stage$stats$var_v_plus_var_epsilon - var_epsilon
   posterior <- abc(var_epsilon, var_v)
-
+  
   beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
-
-  # --- Delta Method: vcov_beta, sd_beta, and CI ---
+  
+  # --- Delta method for vcov and CI ---
   gamma_hat <- first_stage$coefficients$gamma
   theta_hat <- first_stage$coefficients$theta
   vcov_gamma <- first_stage$coefficients$vcov_gamma
   vcov_theta <- first_stage$coefficients$vcov_theta
-
-  # Sort and name everything for alignment
+  
+  # Sort for alignment
   gamma_hat <- gamma_hat[order(names(gamma_hat))]
   theta_hat <- theta_hat[order(names(theta_hat))]
   vcov_gamma <- vcov_gamma[order(rownames(vcov_gamma)), order(colnames(vcov_gamma))]
   vcov_theta <- vcov_theta[order(rownames(vcov_theta)), order(colnames(vcov_theta))]
-
+  
   param_hat <- c(gamma_hat, theta_hat)
+  names(param_hat) <- c(names(gamma_hat), names(theta_hat))
   ng <- length(gamma_hat)
   nt <- length(theta_hat)
-  names(param_hat) <- c(names(gamma_hat), names(theta_hat))
-
+  
   vcov_full <- matrix(0, ng + nt, ng + nt)
   vcov_full[1:ng, 1:ng] <- vcov_gamma
   vcov_full[(ng + 1):(ng + nt), (ng + 1):(ng + nt)] <- vcov_theta
   rownames(vcov_full) <- colnames(vcov_full) <- names(param_hat)
-
-  # Wrapper for Jacobian
+  
   beta_wrapper <- function(params) {
     gamma <- params[1:ng]
     theta <- params[(ng + 1):(ng + nt)]
     names(gamma) <- names(gamma_hat)
     names(theta) <- names(theta_hat)
-    beta_out <- calculate_beta(
-      first_stage$model_type,
-      list(gamma = gamma, theta = theta),
-      posterior
-    )
-    beta_out[order(names(beta_out))]
+    out <- calculate_beta(first_stage$model_type,
+                          list(gamma = gamma, theta = theta),
+                          posterior)
+    out[order(names(out))]
   }
-
+  
   J_raw <- numDeriv::jacobian(beta_wrapper, param_hat)
   rownames(J_raw) <- names(beta_wrapper(param_hat))
   colnames(J_raw) <- names(param_hat)
-
-  J <- J_raw[match(names(beta), rownames(J_raw)), match(names(param_hat), colnames(J_raw))]
-  vcov_ordered <- vcov_full[match(names(param_hat), rownames(vcov_full)), match(names(param_hat), colnames(vcov_full))]
-
+  
+  J <- J_raw[match(names(beta), rownames(J_raw)),
+             match(names(param_hat), colnames(J_raw))]
+  vcov_ordered <- vcov_full[match(names(param_hat), rownames(vcov_full)),
+                            match(names(param_hat), colnames(vcov_full))]
+  
   vcov_beta <- J %*% vcov_ordered %*% t(J)
   sd_beta <- sqrt(diag(vcov_beta))
   names(sd_beta) <- names(beta)
-
-  # === Apply correction for undercoverage in Cox model gf ===
-  if (first_stage$model_type == "cox" && "gf" %in% names(sd_beta)) {
-    sd_beta["gf"] <- sd_beta["gf"] * 1.3  # 30% inflation
-  }
-
+  
+  # Delta method
   z <- qnorm(0.975)
   ci_beta <- data.frame(
     Estimate = beta,
@@ -130,11 +132,11 @@ hapr_second_stage <- function(
     row.names = names(beta),
     check.names = FALSE
   )
-
+  
   # Update stripped model
   first_stage$regressions$y_on_gf_w$stripped_model$coefficients <- beta
   first_stage$regressions$y_on_gc_w$coefficients <- beta
-
+  
   additional_parameters <- list()
   if (first_stage$model_type == "lm") {
     additional_parameters$var_eta <- first_stage$regressions$y_on_gc_w$sigma_squared - posterior$c^2
@@ -143,17 +145,17 @@ hapr_second_stage <- function(
     base_hazard_conversion_ratio <- exp(
       beta["gf"]^2 * posterior$c^2 / 2 + beta["gf"] * theta_intercept * posterior$b
     )
-
+    
     baseline_hazard <- first_stage$regressions$y_on_gf_w$baseline_hazard
     baseline_hazard$hazard <- baseline_hazard$hazard / base_hazard_conversion_ratio
-
+    
     first_stage$regressions$y_on_gf_w$baseline_hazard <- baseline_hazard
     first_stage$regressions$y_on_gf_w$stripped_model$baseline_hazard <- baseline_hazard
-
+    
     additional_parameters$base_hazard_conversion_ratio <- base_hazard_conversion_ratio
     additional_parameters$baseline_hazard <- baseline_hazard
   }
-
+  
   result <- list(
     model_type = first_stage$model_type,
     regressions = first_stage$regressions,
@@ -176,6 +178,7 @@ hapr_second_stage <- function(
   class(result) <- "hapr_fit"
   result
 }
+
 
 #' Calculate beta coefficients based on model type
 #'
