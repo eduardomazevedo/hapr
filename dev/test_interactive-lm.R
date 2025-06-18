@@ -113,7 +113,7 @@ for (term in beta_names) {
   abline(v = true_val, col = "blue", lwd = 2, lty = 2)
 
   legend("topright",
-         legend = c("CI Lower (empirical)", "CI Upper (empirical)", "True beta"),
+         legend = c("CI Lower", "CI Upper", "True beta"),
          col = c("red", "red", "blue"),
          lty = c(1, 1, 2),
          lwd = 2,
