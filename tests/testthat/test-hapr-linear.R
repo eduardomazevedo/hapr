@@ -197,7 +197,7 @@ test_that("hapr confidence intervals for beta achieve exact match coverage (line
     )
   }
 
-  # ---- Part 2: Setup ----
+  # ---- Part 2: True beta from simulation config ----
   sim_data <- create_simulated_dataset()
   fit <- hapr(sim_data$y, sim_data$gc, sim_data$w,
               model_type = "lm",
