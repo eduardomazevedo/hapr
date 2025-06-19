@@ -102,7 +102,11 @@ test_that("hapr confidence intervals for beta achieve exact match coverage (cox)
               improvement_ratio = sim_data$true_improvement_ratio)
 
   beta_names <- names(fit$coefficients$beta)
-  true_beta <- fit$coefficients$beta
+
+  true_beta <- c(gf = default_params$beta_gf,
+                 w1 = default_params$beta_w1,
+                 w2B = 0,
+                 w2C = 0)
 
   n_sim <- 1000
   covered_matrix <- matrix(NA, nrow = n_sim, ncol = length(beta_names))
@@ -137,7 +141,7 @@ test_that("hapr confidence intervals for beta achieve exact match coverage (cox)
 
   print(coverage_df)
 
-  expect_true(all(coverage_df$Coverage > 0.70),
+  expect_true(all(coverage_df$Coverage > 0.90),
               info = paste("Coverage below threshold:\n",
                            paste(coverage_df$Term, coverage_df$Coverage, collapse = "\n")))
 })

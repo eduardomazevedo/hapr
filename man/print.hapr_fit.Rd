@@ -17,15 +17,3 @@ The input object, invisibly
 \description{
 Prints a concise summary of a hapr_fit object.
 }
-\details{
-For Cox models, note that the confidence intervals and standard errors are computed via the delta method
-and asymptotic approximations. These may substantially underestimate uncertainty, especially for the \code{gf}
-coefficient, because:
-\itemize{
-\item The Cox model is based on a partial likelihood and not a full likelihood
-\item The delta method assumes a locally linear approximation which may not hold well for nonlinear link functions
-}
-These estimates are intended as a first pass. For higher-quality inference, use bootstrapping.
-
-A note is printed in the console if the model type is "cox".
-}
