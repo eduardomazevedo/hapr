@@ -26,22 +26,3 @@ A hapr_lm_fit object containing the results of the second stage
 \description{
 Fits the full HARP model given the first stage fit and an improvement ratio.
 }
-\details{
-After fitting the first stage, we can specify an improvement ratio to estimate
-the full model. Alternatively, we can specify the R-squared of the future fit
-to estimate the improvement ratio. If specifying the r2_future, you can also
-specify the r2_current to estimate the improvement ratio. Otherwise, the
-r2_current is extracted from the data in the first stage fit.
-For the cox model, the confidence intervals and standard errors returned
-are based on a delta method approximation using the partial likelihood. These
-are known to underestimate the true variance, particularly for the gf coefficient.
-
-The undercoverage arises due to:
-\enumerate{
-\item The Cox likelihood is approximate.
-\item The delta method approximation is linear, but the transformation to beta is nonlinear.
-}
-
-The reported intervals are useful for quick inference, but users seeking higher accuracy
-should apply a bootstrap.
-}

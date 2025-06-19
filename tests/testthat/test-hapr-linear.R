@@ -151,6 +151,7 @@ test_that("hapr print output is stable (linear)", {
   expect_snapshot(print(fit))
 })
 
+# ---- CI COVERAGE TEST ----
 test_that("hapr confidence intervals for beta achieve exact match coverage (linear)", {
   # ---- Part 1: Configuration ----
   default_params <- list(
@@ -192,19 +193,26 @@ test_that("hapr confidence intervals for beta achieve exact match coverage (line
       y = y,
       gc = gc_normalized,
       w = w,
-      gf = gf,
       true_improvement_ratio = true_improvement_ratio
     )
   }
 
-  # ---- Part 2: Fit once to get true beta ----
+  # ---- Part 2: True beta from simulation config ----
   sim_data <- create_simulated_dataset()
   fit <- hapr(sim_data$y, sim_data$gc, sim_data$w,
               model_type = "lm",
               improvement_ratio = sim_data$true_improvement_ratio)
 
   beta_names <- names(fit$coefficients$beta)
-  true_beta <- fit$coefficients$beta
+
+  # True parameter
+  true_beta <- c(
+    `(Intercept)` = 0,
+    gf = default_params$beta_gf,
+    w1 = default_params$beta_w1,
+    w2B = 0,
+    w2C = 0
+  )
 
   n_sim <- 1000
   covered_matrix <- matrix(NA, nrow = n_sim, ncol = length(beta_names))
@@ -223,7 +231,6 @@ test_that("hapr confidence intervals for beta achieve exact match coverage (line
       improvement_ratio = sim_data_i$true_improvement_ratio
     )
 
-    beta_hat <- fit_i$coefficients$beta
     ci_beta <- fit_i$ci_beta
 
     for (term in beta_names) {
