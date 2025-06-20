@@ -13,8 +13,11 @@ Suggests:
     knitr,
     rmarkdown,
     tidyverse,
+    devtools,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Imports:
-    survival
+    survival,
+    numDeriv,
+    stats
 VignetteBuilder: knitr

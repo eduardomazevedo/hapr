@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Fits the full HARP model given the first stage fit and an improvement ratio.
-#'
+#' @importFrom numDeriv jacobian
 #' @param first_stage A hapr_first_stage_fit object
 #' @param improvement_ratio The ratio to extrapolate by
 #' @param r2_current The R-squared of the current fit
