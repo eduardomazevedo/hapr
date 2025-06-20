@@ -27,12 +27,12 @@ print.hapr_fit <- function(x, ...) {
       "(", x$stats$heritability_source, ")\n")
 
   if (!is.na(x$stats$r2_current)) {
-    cat("R² current:", sprintf("%.4f", x$stats$r2_current),
+    cat("R\U00B2 current:", sprintf("%.4f", x$stats$r2_current),
         "(", x$stats$r2_current_source, ")\n")
   }
 
   if (!is.na(x$stats$r2_future)) {
-    cat("R² future:", sprintf("%.4f", x$stats$r2_future), "\n")
+    cat("R\U00B2 future:", sprintf("%.4f", x$stats$r2_future), "\n")
   }
 
   cat("Max improvement ratio:", sprintf("%.4f", x$stats$max_improvement_ratio), "\n")
@@ -130,11 +130,11 @@ print.summary.hapr_fit <- function(x, ...) {
       "(", x$heritability_source, ")\n")
   cat("Max improvement ratio:", sprintf("%.4f", x$max_improvement_ratio), "\n")
   if (!is.na(x$r2_current)) {
-    cat("R² current:", sprintf("%.4f", x$r2_current),
+    cat("R\U00B2 current:", sprintf("%.4f", x$r2_current),
         "(", x$r2_current_source, ")\n")
   }
   if (!is.na(x$r2_future)) {
-    cat("R² future:", sprintf("%.4f", x$r2_future), "\n")
+    cat("R\U00B2 future:", sprintf("%.4f", x$r2_future), "\n")
   }
 
   cat("Var(v):", sprintf("%.4f", x$var_v), "\n")

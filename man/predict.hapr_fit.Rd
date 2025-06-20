@@ -4,10 +4,16 @@
 \alias{predict.hapr_fit}
 \title{Predict Outcomes from a hapr_fit Object}
 \usage{
-\method{predict}{hapr_fit}(fit, newdata, covariates = c("w", "gc_w", "gf_w"), type = "response")
+\method{predict}{hapr_fit}(
+  object,
+  newdata,
+  covariates = c("w", "gc_w", "gf_w"),
+  type = "response",
+  ...
+)
 }
 \arguments{
-\item{fit}{An object of class \code{hapr_fit}, containing fitted regression models.}
+\item{object}{An object of class \code{hapr_fit}, containing fitted regression models.}
 
 \item{newdata}{A data frame with new observations for prediction.}
 
@@ -17,6 +23,8 @@ Defaults to \code{c('w', 'gc_w', 'gf_w')}: just covariates w, or combine them wi
 \item{type}{A character string indicating the type of prediction.
 - For \code{lm}/\code{probit}, defaults to \code{"response"}.
 - For \code{cox}, can be \code{"lp"} (linear predictor) or \code{"response"}/\code{"risk"} (exp of linear predictor).}
+
+\item{...}{Additional arguments (currently ignored).}
 }
 \value{
 A data frame with the same rows as \code{newdata}, plus columns for predictions.

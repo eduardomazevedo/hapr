@@ -5,3 +5,6 @@
 ^dev$
 ^doc$
 ^Meta$
+^assets$
+^plan\.md$
+^readme\.md$

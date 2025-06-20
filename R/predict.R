@@ -5,18 +5,20 @@
 #' It computes predictions based on specified covariates, supporting
 #' linear (`lm`), `probit`, and `cox` regression.
 #'
-#' @param fit An object of class `hapr_fit`, containing fitted regression models.
+#' @param object An object of class `hapr_fit`, containing fitted regression models.
 #' @param newdata A data frame with new observations for prediction.
 #' @param covariates A character vector specifying which covariates to use for prediction.
 #'        Defaults to `c('w', 'gc_w', 'gf_w')`: just covariates w, or combine them with gc or gf.
 #' @param type A character string indicating the type of prediction.
 #'        - For `lm`/`probit`, defaults to `"response"`.
 #'        - For `cox`, can be `"lp"` (linear predictor) or `"response"`/`"risk"` (exp of linear predictor).
-#'
+#' @param ... Additional arguments (currently ignored).
 #' @return A data frame with the same rows as `newdata`, plus columns for predictions.
 #'
+#' @method predict hapr_fit
 #' @export
-predict.hapr_fit <- function(fit, newdata, covariates = c("w", "gc_w", "gf_w"), type = "response") {
+predict.hapr_fit <- function(object, newdata, covariates = c("w", "gc_w", "gf_w"), type = "response", ...) {
+  fit <- object
   # Validate model type
   if (!fit$model_type %in% c("lm", "probit", "cox")) {
     stop("Model type must be 'lm', 'probit', or 'cox'.")
