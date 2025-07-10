@@ -120,7 +120,7 @@ print(fit)
 
 With the model fitted and the simulated data, we can evaluate the performance of the current and future polygenic scores. A good place to start is to compare survival curves.
 
-```{r, fig.width=6, fig.asp=9/16}
+```{r, fig.alt = "Survival Curves", fig.width=6, fig.asp=9/16}
 # Plot survival curves
 simulated_data <- hapr_simulate(fit, covariates)
 survival_curves_gf_w <- hapr_survfit(fit, covariates = "gf_w", newdata = simulated_data)

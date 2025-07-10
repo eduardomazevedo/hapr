@@ -1,0 +1,42 @@
+url: https://eduardomazevedo.github.io/hapr
+
+template:
+  bootstrap: 5
+  params:
+    logo: man/figures/logo.svg
+home:
+  title: "HAPR: Heritability-Adjusted Risk Prediction"
+  strip_header: true
+
+navbar:
+  structure:
+    left:
+      - home
+      - reference
+      - articles
+      - news
+
+articles:
+  - title: "Vignettes"
+    contents:
+      - cox
+      - probit
+
+reference:
+  - title: "Core Functions"
+    contents:
+      - hapr
+      - hapr_first_stage
+      - hapr_second_stage
+      - hapr_simulate
+      - hapr_survfit
+      - hapr_basehaz
+      - abc
+      - calculate_beta
+
+  - title: "S3 Methods"
+    contents:
+      - plot.hapr_survfit
+      - predict.hapr_fit
+      - print.hapr_fit
+      - summary.hapr_fit
