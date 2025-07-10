@@ -6,6 +6,7 @@ Authors@R:
 Description: What the package does (one paragraph).
 License: MIT + file LICENSE
 Encoding: UTF-8
+URL: https://eduardomazevedo.github.io/hapr
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Suggests: 
