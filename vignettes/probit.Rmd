@@ -124,7 +124,7 @@ head(risk_dataset)
 
 We can now compare how the current and future polygenic scores add value relative to the traditional risk factors. One simple way are scatterplots of the predicted risk using the polygenic score vs the predicted risk using the traditional risk factors. If the polygenic score adds little extra value, we should see the points clustered around the diagonal.
 
-```{r}
+```{r, fig.alt = "Plot for current and future polygenic score"}
 # Plot for current polygenic score
 ggplot(risk_dataset, aes(x = y_hat_w, y = y_hat_gc_w)) +
   geom_point(alpha = 0.5) +

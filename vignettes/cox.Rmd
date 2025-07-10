@@ -78,7 +78,7 @@ heart_disease_data <- cox_data |>
 
 We have electronic health records on potential cardiac patients, as in the introductory probit vignette. We observe disease status (ASCVD) and a polygenic score. We also have covariates: PREVENT score (a standard risk estimate based on traditional risk factors) and gender. Here, we assume that patients are followed by different lengths of time, and that there is censoring, as is common in electronic health records.
 
-```{r, fig.width=6, fig.asp=9/16}
+```{r, fig.alt = "Plot of Time to Event status", fig.width=6, fig.asp=9/16}
 # Display the first few rows of our data
 head(heart_disease_data)
 
