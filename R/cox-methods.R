@@ -17,6 +17,10 @@ hapr_basehaz <- function(fit, covariates = "gf_w") {
 
 #' Create a survival fit from a HAPR Cox model
 #'
+#' @param fit A hapr_fit object from a Cox model
+#' @param covariates Character string indicating which covariates to use, one of: 'gf_w' (default), 'gc_w', or 'w'
+#' @param newdata A data frame containing new observations for which to compute survival curves
+#' @return A hapr_survfit object containing survival probabilities over time
 #' @export
 hapr_survfit <- function(fit,
                          covariates = "gf_w",
@@ -90,6 +94,14 @@ hapr_survfit <- function(fit,
 
 #' Plot survival curves from a HAPR survival fit
 #'
+#' @param x A hapr_survfit object returned by survfit.hapr_fit
+#' @param mode Character string indicating how to select curves for plotting:
+#'        "percentiles" (default) to show curves at specific risk percentiles
+#'        "subjects" to show curves for each individual subject
+#' @param percentiles Numeric vector of probability values (0-1) indicating which
+#'        percentiles to plot when mode="percentiles"
+#' @param ... Additional arguments (not currently used)
+#' @return A plot of the survival curves (using ggplot2 if available, otherwise base R)
 #' @export
 plot.hapr_survfit <- function(x,
                               mode = "percentiles",
