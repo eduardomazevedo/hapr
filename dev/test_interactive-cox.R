@@ -65,3 +65,50 @@ survival_curves <- hapr_survfit(fit, covariates = "gf_w", newdata = simulated_w 
 
 # Test plot.hapr_survfit
 plot(survival_curves, mode = "percentiles")
+
+
+# Conditional survival curves starting at time = 2
+survival_cond <- hapr_survfit(
+  fit,
+  covariates = "gf_w",
+  newdata = simulated_w |> head(300),
+  start.time = 2
+)
+
+plot(survival_cond, mode = "percentiles", percentiles = c(0.1, 0.5, 0.9))
+
+
+
+# Predict relative risk
+pred_risk <- predict(fit, newdata = simulated_w, covariates = "gf_w", type = "risk")$y_hat_gf_w
+threshold <- quantile(pred_risk, 0.9)
+
+# Compute average survival for top 10% risk
+sf_avg <- hapr_survfit(
+  fit,
+  covariates = "gf_w",
+  newdata = simulated_w,
+  aggregate = pred_risk > threshold
+)
+
+plot(sf_avg$time, sf_avg$surv_avg, type = "l", lwd = 2,
+     main = "Average Survival (Top 10% Risk)", xlab = "Time", ylab = "Survival")
+
+
+sf_ci <- hapr_survfit(
+  fit,
+  covariates = "gf_w",
+  newdata = simulated_w,
+  aggregate = pred_risk > threshold,
+  conf.int = TRUE,
+  conf.level = 0.95,
+  n.boot = 500
+)
+
+# Plot with bands
+plot(sf_ci$time, sf_ci$surv_avg, type = "l", ylim = c(0, 1),
+     xlab = "Time", ylab = "Survival", main = "Avg Survival + 95% CI (Top 10%)", lwd = 2)
+lines(sf_ci$time, sf_ci$surv_avg_lower, col = "red", lty = 2)
+lines(sf_ci$time, sf_ci$surv_avg_upper, col = "red", lty = 2)
+legend("topright", legend = c("Mean", "95% CI"), col = c("black", "red"), lty = c(1, 2))
+
