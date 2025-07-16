@@ -245,3 +245,55 @@ test_that("hapr confidence intervals for beta achieve exact match coverage (prob
               info = paste("Coverage below threshold:\n",
                            paste(coverage_df$Term, coverage_df$Coverage, collapse = "\n")))
 })
+
+# ---- PSEUDO-R2 CALCULATION TEST ----
+test_that("pseudo-R2 from predict() matches manual calculation (probit)", {
+  # Use existing helper function
+  data <- simulate_mock_dataset(n = 1000)
+  
+  # Fit the hapr model
+  fit <- hapr(
+    y = data$y,
+    gc = data$gc,
+    w = data$w,
+    model_type = "probit",
+    r2_future = 0.31
+  )
+
+  # Simulate data
+  sim_data <- hapr_simulate(fit, w = data$w, gc = data$gc)
+
+  # Make predictions
+  pred <- predict(fit, newdata = sim_data, covariates = "gf_w", type = "link")
+  y_hat_gf_w <- pred$y_hat_gf_w
+
+  # Calculate pseudo-R2 from predict function
+  pseudo_r2_predict <- var(y_hat_gf_w) / (1 + var(y_hat_gf_w))
+
+  # Manual calculation using the full formula
+  beta_vec <- fit$coefficients$beta
+  beta_w <- beta_vec[names(beta_vec) != "gf"]
+  beta_gf <- beta_vec["gf"]
+
+  # Get variance-covariance matrix of w
+  w_matrix <- model.matrix(~., data = data$w)
+  var_w <- var(w_matrix[, -1])  # Remove intercept
+
+  # Calculate covariance between gf and w
+  gf_sim <- sim_data$gf
+  cov_gf_w <- cov(gf_sim, w_matrix[, -1])
+
+  # Manual calculation
+  beta_w_aligned <- beta_w[colnames(var_w)]
+  cov_gf_w_col <- t(as.matrix(cov_gf_w))
+
+  var_L_hat_gf_w <- 
+    var(gf_sim) * beta_gf^2 +
+    as.numeric(t(beta_w_aligned) %*% var_w %*% beta_w_aligned) + 
+    2 * beta_gf * as.numeric(t(beta_w_aligned) %*% cov_gf_w_col)
+
+  pseudo_r2_manual <- var_L_hat_gf_w / (1 + var_L_hat_gf_w)
+
+  # Test that the two calculations match
+  expect_equal(pseudo_r2_predict, as.numeric(pseudo_r2_manual), tolerance = 1e-10)
+})

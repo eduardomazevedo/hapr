@@ -49,7 +49,7 @@ strip_lm <- function(fit) {
   fit$residuals <- NULL
   fit$fitted.values <- NULL
   fit$effects <- NULL
-  fit$qr$qr <- NULL
+  fit$qr <- NULL
   fit$weights <- NULL
 
   # Return everything in a clean list
@@ -106,6 +106,10 @@ strip_probit <- function(fit) {
   fit$effects <- NULL
   fit$qr$qr <- NULL
   fit$weights <- NULL
+  fit$qr <- NULL
+  fit$linear.predictors <- NULL
+  fit$data <- NULL
+  fit$prior.weights <- NULL
 
   # Return simplified object
   list(
