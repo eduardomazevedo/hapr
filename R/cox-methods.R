@@ -54,6 +54,11 @@ hapr_survfit <- function(fit,
     cumhaz <- cumhaz[keep_idx, , drop = FALSE]
     surv <- surv[keep_idx, , drop = FALSE]
     surv <- surv / matrix(surv_t0, nrow = length(time), ncol = length(surv_t0), byrow = TRUE)
+
+    # Insert start.time with survival = 1
+    time <- c(start.time, time)
+    surv <- rbind(rep(1, length(relative_risk)), surv)
+    if (exists("cumhaz")) cumhaz <- rbind(NA, cumhaz)
   }
 
   result <- list()
