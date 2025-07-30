@@ -116,9 +116,13 @@ hapr_second_stage <- function(
     check.names = FALSE
   )
 
-  # Update stripped model
-  first_stage$regressions$y_on_gf_w$stripped_model$coefficients <- beta
-  first_stage$regressions$y_on_gc_w$coefficients <- beta
+  # Create model for y_on_gf_w
+  y_on_gf_w <- first_stage$regressions$y_on_gc_w
+
+  # Update model coefficients
+  y_on_gf_w$coefficients <- beta
+  y_on_gf_w$vcov_coefficients <- vcov_beta
+  y_on_gf_w$stripped_model$coefficients <- beta
 
   additional_parameters <- list()
   if (first_stage$model_type == "lm") {
@@ -129,19 +133,60 @@ hapr_second_stage <- function(
       beta["gf"]^2 * posterior$c^2 / 2 + beta["gf"] * theta_intercept * posterior$b
     )
 
-    baseline_hazard <- first_stage$regressions$y_on_gf_w$baseline_hazard
+    baseline_hazard <- first_stage$regressions$y_on_gc_w$baseline_hazard
     baseline_hazard$hazard <- baseline_hazard$hazard / base_hazard_conversion_ratio
 
-    first_stage$regressions$y_on_gf_w$baseline_hazard <- baseline_hazard
-    first_stage$regressions$y_on_gf_w$stripped_model$baseline_hazard <- baseline_hazard
+    y_on_gf_w$baseline_hazard <- baseline_hazard
 
     additional_parameters$base_hazard_conversion_ratio <- base_hazard_conversion_ratio
     additional_parameters$baseline_hazard <- baseline_hazard
   }
 
+  # Clean up not needed parts of y_on_gf_w based on model type
+  if (first_stage$model_type == "cox") {
+    y_on_gf_w$stripped_model$var <- NULL
+    y_on_gf_w$stripped_model$iter <- NULL
+    y_on_gf_w$stripped_model$means <- NULL
+    y_on_gf_w$stripped_model$method <- NULL
+    y_on_gf_w$stripped_model$assign <- NULL
+    y_on_gf_w$stripped_model$timefix <- NULL
+    y_on_gf_w$stripped_model$formula <- NULL
+    y_on_gf_w$stripped_model$xlevels <- NULL
+    y_on_gf_w$stripped_model$contrasts <- NULL
+    y_on_gf_w$stripped_model$formula <- NULL
+  } else if (first_stage$model_type == "lm") {
+    y_on_gf_w$stripped_model$rank <- NULL
+    y_on_gf_w$stripped_model$assign <- NULL
+    y_on_gf_w$stripped_model$qr <- NULL
+    y_on_gf_w$stripped_model$df.residual <- NULL
+    y_on_gf_w$stripped_model$contrasts <- NULL
+    y_on_gf_w$stripped_model$xlevels <- NULL
+    y_on_gf_w$stripped_model$call <- NULL
+    y_on_gf_w$stripped_model$terms <- NULL
+  } else if (first_stage$model_type == "probit") {
+    y_on_gf_w$stripped_model$R <- NULL
+    y_on_gf_w$stripped_model$rank <- NULL
+    y_on_gf_w$stripped_model$deviance <- NULL
+    y_on_gf_w$stripped_model$aic <- NULL
+    y_on_gf_w$stripped_model$null.deviance <- NULL
+    y_on_gf_w$stripped_model$iter <- NULL
+    y_on_gf_w$stripped_model$df.residual <- NULL
+    y_on_gf_w$stripped_model$df.null <- NULL
+    y_on_gf_w$stripped_model$converged <- NULL
+    y_on_gf_w$stripped_model$boundary <- NULL
+    y_on_gf_w$stripped_model$call <- NULL
+    y_on_gf_w$stripped_model$formula <- NULL
+    y_on_gf_w$stripped_model$terms <- NULL
+    y_on_gf_w$stripped_model$offset <- NULL
+    y_on_gf_w$stripped_model$control <- NULL
+    y_on_gf_w$stripped_model$contrasts <- NULL
+    y_on_gf_w$stripped_model$xlevels <- NULL
+    y_on_gf_w$stripped_model$qr <- NULL
+  }
+
   result <- list(
     model_type = first_stage$model_type,
-    regressions = first_stage$regressions,
+    regressions = c(first_stage$regressions, list(y_on_gf_w = y_on_gf_w)),
     coefficients = c(first_stage$coefficients, list(beta = beta)),
     standard_errors = sd_beta,
     vcov_beta = vcov_beta,

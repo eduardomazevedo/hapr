@@ -28,12 +28,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   } else if (model_type == "probit") {
     regression_function <- function(data) strip_probit(glm(y ~ ., data = data, family = binomial(link = "probit")))
   } else if (model_type == "cox") {
-    regression_function <- function(data) {
-      full_model <- survival::coxph(y ~ ., data = data)
-      stripped <- strip_cox(full_model)
-      stripped$model <- full_model  # <-- Add full model for vcov()
-      stripped
-    }
+    regression_function <- function(data) strip_cox(survival::coxph(y ~ ., data = data))
   } else {
     stop("Unsupported model_type: ", model_type)
   }
@@ -43,8 +38,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     gc_on_w = strip_lm(lm(gc ~ ., data = w)),
     y_on_w = regression_function(w),
     y_on_gc = regression_function(data.frame(gc = gc)),
-    y_on_gc_w = regression_function(cbind(gc = gc, w)),
-    y_on_gf_w = regression_function(cbind(gf = gc, w))
+    y_on_gc_w = regression_function(cbind(gc = gc, w))
   )
   
   # Extract coefficients
@@ -55,7 +49,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     vcov_gamma = {
       if (model_type == "cox") {
         # Use full Cox model for vcov
-        vcov(regressions$y_on_gc_w$model)
+        regressions$y_on_gc_w$vcov_coefficients
       } else {
         regressions$y_on_gc_w$vcov_coefficients
       }

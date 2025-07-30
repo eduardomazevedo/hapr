@@ -79,6 +79,10 @@ Icon?
 .RData
 .Rproj.user/
 
+# Generated documentation files
+man/
+docs/pkgdown.yml
+
 # data folders
 data/
 output/
