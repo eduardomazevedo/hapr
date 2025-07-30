@@ -36,6 +36,7 @@ simulate_mock_dataset <- function(n,
 
   list(
     y = y,
+    gf = gf,
     gc = gc_normalized,
     w = w,
     true_improvement_ratio = 1 / (1 - var_epsilon),
@@ -144,4 +145,49 @@ test_that("hapr confidence intervals for beta achieve exact match coverage (cox)
   expect_true(all(coverage_df$Coverage > 0.90),
               info = paste("Coverage below threshold:\n",
                            paste(coverage_df$Term, coverage_df$Coverage, collapse = "\n")))
+})
+
+# ---- hapr_survfit tests ----
+test_that("hapr_survfit works with basic input and returns valid structure", {
+  sim <- simulate_mock_dataset(n = 200)
+  fit <- hapr(sim$y, sim$gc, sim$w, model_type = "cox", improvement_ratio = sim$true_improvement_ratio)
+
+  newdata <- cbind(sim$w, gf = sim$gf)
+  survfit_out <- hapr_survfit(fit, newdata = newdata)
+  expect_s3_class(survfit_out, "hapr_survfit")
+  expect_true("time" %in% names(survfit_out))
+  expect_true("surv" %in% names(survfit_out))
+  expect_true(all(dim(survfit_out$surv)[2] == nrow(newdata)))
+})
+
+test_that("start.time produces valid conditional survival curves", {
+  sim <- simulate_mock_dataset(n = 200)
+  fit <- hapr(sim$y, sim$gc, sim$w, model_type = "cox", improvement_ratio = sim$true_improvement_ratio)
+
+  newdata <- cbind(sim$w, gf = sim$gf)
+  survfit_cond <- hapr_survfit(fit, newdata = newdata[1:50, ], start.time = 2)
+
+  expect_true(min(survfit_cond$time) >= 2)
+
+  # Use closest available time to 2
+  start_idx <- which.min(abs(survfit_cond$time - 2))
+  expect_true(all(abs(survfit_cond$surv[start_idx, ] - 1) < 1e-6))
+})
+
+test_that("aggregation computes average curve and CIs", {
+  sim <- simulate_mock_dataset(n = 300)
+  fit <- hapr(sim$y, sim$gc, sim$w, model_type = "cox", improvement_ratio = sim$true_improvement_ratio)
+
+  newdata <- cbind(sim$w, gf = sim$gf)
+  pred <- predict(fit, newdata = newdata, covariates = "gf_w", type = "risk")$y_hat_gf_w
+  threshold <- quantile(pred, 0.9)
+
+  sf <- hapr_survfit(fit, newdata = newdata, aggregate = pred > threshold,
+                     conf.int = TRUE, n.boot = 30)
+
+  expect_true("surv_avg" %in% names(sf))
+  expect_true("surv_avg_lower" %in% names(sf))
+  expect_true("surv_avg_upper" %in% names(sf))
+  expect_true(all(sf$surv_avg_upper >= sf$surv_avg))
+  expect_true(all(sf$surv_avg >= sf$surv_avg_lower))
 })
