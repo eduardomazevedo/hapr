@@ -47,6 +47,8 @@ simulate_mock_dataset <- function(n,
 
 # ---- CI COVERAGE TEST ----
 test_that("hapr confidence intervals for beta achieve exact match coverage (cox)", {
+  skip_if_not(Sys.getenv("HAPR_RUN_SLOW_TESTS") == "true",
+              "Skipping slow coverage test; set HAPR_RUN_SLOW_TESTS=true to run")
   default_params <- list(
     n = 1e4,
     var_v = 1 / 3,

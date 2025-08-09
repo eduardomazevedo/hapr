@@ -153,6 +153,8 @@ test_that("hapr print output is stable (probit)", {
 
 # ---- CI COVERAGE TEST ----
 test_that("hapr confidence intervals for beta achieve exact match coverage (probit)", {
+  skip_if_not(Sys.getenv("HAPR_RUN_SLOW_TESTS") == "true",
+              "Skipping slow coverage test; set HAPR_RUN_SLOW_TESTS=true to run")
   # ---- Part 1: Configuration ----
   default_params <- list(
     n = 1e4,
