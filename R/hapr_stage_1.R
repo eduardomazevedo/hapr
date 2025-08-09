@@ -11,10 +11,11 @@
 #' @param gc Polygenic risk score (has to be normalized)
 #' @param w Control variables
 #' @param model_type "lm", "probit", or "cox"
+#' @param softmax_correction, only used if model_type is "cox". Can be "clt" (default), "softmax-fast", or "softmax-slow".
 #'
 #' @return A hapr_first_stage_fit object containing the results of the first stage.
 #' @export
-hapr_first_stage <- function(y, gc, w, model_type) {
+hapr_first_stage <- function(y, gc, w, model_type, softmax_correction = "clt") {
   # Preprocess inputs
   preprocessed <- preprocess(y, gc, w, model_type = model_type)
   y <- preprocessed$y
@@ -28,9 +29,16 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   } else if (model_type == "probit") {
     regression_function <- function(data) strip_probit(glm(y ~ ., data = data, family = binomial(link = "probit")))
   } else if (model_type == "cox") {
-    regression_function <- function(data) strip_cox(survival::coxph(y ~ ., data = data))
+    regression_function <- function(data) strip_cox(survival::coxph(y ~ ., data = data), softmax_correction)
   } else {
     stop("Unsupported model_type: ", model_type)
+  }
+
+  # Validate softmax_correction
+  if (model_type == "cox") {
+    if (!(softmax_correction %in% c("clt", "softmax-fast", "softmax-slow"))) {
+      stop("softmax_correction must be 'clt', 'softmax-fast', or 'softmax-slow' if model_type is 'cox'.")
+    }
   }
   
   # Run regressions
@@ -71,7 +79,6 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     stats$var_v_plus_var_epsilon <- pmin(1 - stats$var_wtheta, 1)
     stats$max_improvement_ratio <- Inf
   }
-  
   # Return
   result <- list(
     model_type = model_type,

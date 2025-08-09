@@ -138,14 +138,20 @@ strip_probit <- function(fit) {
 #' }
 #'
 #' @keywords internal
-strip_cox <- function(fit) {
+strip_cox <- function(fit, softmax_correction = "clt") {
   # Check if model is a Cox proportional hazards model
   if (!inherits(fit, "coxph")) {
     stop("Model must be a coxph object from the survival package.")
   }
 
   # Get psi-hat
-  psi_hat <- get_psi_hat(fit)
+  if (softmax_correction == "clt") {
+    psi_hat <- 0
+  } else if (softmax_correction == "softmax-fast") {
+    psi_hat <- 1
+  } else if (softmax_correction == "softmax-slow") {
+    psi_hat <- get_psi_hat(fit)
+  }
 
   # Extract coefficients
   coefficients <- fit$coefficients

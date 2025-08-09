@@ -57,6 +57,7 @@ hapr_second_stage <- function(
   var_v <- first_stage$stats$var_v_plus_var_epsilon - var_epsilon
   posterior <- abc(var_epsilon, var_v)
 
+  
   beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
 
   # --- Delta method for vcov and CI ---
@@ -235,9 +236,11 @@ calculate_beta <- function(model_type, coefficients, posterior) {
       posterior$b * theta * beta[i_gc]
 
   } else if (model_type == "cox") {
+    # Jon's softmax correction (in CLT case alpha = 1 so no correction).
     psi_hat <- coefficients$psi_hat
     alpha_hat <- 1 - (posterior$c) ^ 2 * psi_hat / 2
-    gamma <- gamma / alpha_hat # Jon's correction based on softmax approximation, supposed to be better than CLT approximation.
+    gamma <- gamma / alpha_hat
+
     theta_intercept <- theta[1]
     theta_others <- theta[-1]
     beta[i_gc] <- gamma[i_gc] / posterior$a
