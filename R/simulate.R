@@ -30,10 +30,10 @@
 #'             model_type = "lm", improvement_ratio = 2)
 #'             
 #' # Simulate 100 observations using the same covariates
-#' sim_data <- simulate(fit, w = covariates, repetitions = 10)
+#' sim_data <- hapr_simulate(fit, w = covariates, repetitions = 10)
 #' 
 #' # Simulate with provided genetic scores
-#' sim_data2 <- simulate(fit, w = covariates, gc = genetic_score)
+#' sim_data2 <- hapr_simulate(fit, w = covariates, gc = genetic_score)
 #' }
 #'
 #' @seealso \code{\link{hapr}}, \code{\link{hapr_first_stage}}, \code{\link{hapr_second_stage}}
@@ -46,6 +46,10 @@ hapr_simulate <- function(object, w, gc = NULL, repetitions = 1) {
   # Check that object is a hapr_fit
   if (!inherits(object, "hapr_fit")) {
     stop("The 'object' parameter must be a hapr_fit object.")
+  }
+  # If gc is provided and repetitions is greater than 1, throw an error
+  if (!is.null(gc) && repetitions > 1) {
+    stop("If gc is provided, repetitions must be 1.")
   }
 
   fit <- object
