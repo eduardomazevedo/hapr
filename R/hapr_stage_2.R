@@ -235,6 +235,9 @@ calculate_beta <- function(model_type, coefficients, posterior) {
       posterior$b * theta * beta[i_gc]
 
   } else if (model_type == "cox") {
+    psi_hat <- coefficients$psi_hat
+    alpha_hat <- 1 - (posterior$c) ^ 2 * psi_hat / 2
+    gamma <- gamma / alpha_hat # Jon's correction based on softmax approximation, supposed to be better than CLT approximation.
     theta_intercept <- theta[1]
     theta_others <- theta[-1]
     beta[i_gc] <- gamma[i_gc] / posterior$a

@@ -55,6 +55,10 @@ hapr_first_stage <- function(y, gc, w, model_type) {
       }
     }
   )
+
+  if (model_type == "cox") {
+    coefficients$psi_hat <- regressions$y_on_gc_w$psi_hat
+  }
   
   # Summary statistics
   stats <- list(

@@ -157,3 +157,64 @@ plot.hapr_survfit <- function(x,
     legend("topright", legend = unique_labels, col = colors, lwd = 2, bty = "n")
   }
 }
+
+
+#' Estimate Psi-hat from a Cox Proportional Hazards Model
+#'
+#' Computes an estimate of the impurity measure Psi-hat from a fitted Cox
+#' proportional hazards model, based on the linear predictors and the softmax
+#' scores at each event time. This is used for Jonathan's Cox likelihood approximation.
+#'
+#' @param cox_model_fit A fitted Cox model object from [survival::coxph()].
+#'
+#' @return A numeric scalar representing the estimated Psi-hat.
+#' 
+#' @details
+#' The function iterates over all unique event times. For each event time,
+#' it identifies the risk set and calculates softmax scores based on the linear
+#' predictors of subjects in the risk set. The impurity measure at each event
+#' time is computed as \eqn{\sum_j s_{ij} (1 - s_{ij})}, where \eqn{s_{ij}} is the
+#' softmax score for subject \eqn{j} at event time \eqn{t_i}. Psi-hat is the average
+#' of these impurities across all events.
+#'
+#' @examples
+#' library(survival)
+#' data(lung)
+#' fit <- coxph(Surv(time, status == 2) ~ age + sex + ph.ecog, data = lung)
+#' get_psi_hat(fit)
+#'
+#' @export
+get_psi_hat <- function(cox_model_fit) {
+  if (!inherits(cox_model_fit, "coxph")) {
+    stop("Input must be a fitted Cox model (coxph object).")
+  }
+
+  # Linear predictor for each subject
+  eta_hat <- predict(cox_model_fit, type = "lp")
+  
+  # Extract time and status
+  time <- cox_model_fit$y[, "time"]
+  status <- cox_model_fit$y[, "status"]
+  
+  # Unique event times (status == 1 means event occurred)
+  event_times <- sort(unique(time[status == 1]))
+  
+  psi_sum <- 0
+  n_events <- 0
+  
+  for (t_i in event_times) {
+    risk_set <- which(time >= t_i)
+    event_set <- which(time == t_i & status == 1)
+    
+    eta_risk <- eta_hat[risk_set]
+    exp_eta <- exp(eta_risk)
+    s_ij <- exp_eta / sum(exp_eta)
+    
+    psi_ti <- sum(s_ij * (1 - s_ij))
+    psi_sum <- psi_sum + psi_ti
+    n_events <- n_events + length(event_set)
+  }
+  
+  psi_hat <- psi_sum / n_events
+  return(psi_hat)
+}

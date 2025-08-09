@@ -144,6 +144,9 @@ strip_cox <- function(fit) {
     stop("Model must be a coxph object from the survival package.")
   }
 
+  # Get psi-hat
+  psi_hat <- get_psi_hat(fit)
+
   # Extract coefficients
   coefficients <- fit$coefficients
 
@@ -179,6 +182,7 @@ strip_cox <- function(fit) {
     coefficients = coefficients,
     vcov_coefficients = vcov_coefficients,
     baseline_hazard = baseline_hazard,
+    psi_hat = psi_hat,
     stripped_model = fit
   )
 }
