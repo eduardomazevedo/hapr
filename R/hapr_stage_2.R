@@ -57,8 +57,19 @@ hapr_second_stage <- function(
   var_v <- first_stage$stats$var_v_plus_var_epsilon - var_epsilon
   posterior <- abc(var_epsilon, var_v)
 
-  
-  beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
+  # Handle alpha for Cox model
+  alpha_hat <- NULL
+  if (first_stage$model_type == "cox") {
+    psi_hat <- first_stage$coefficients$psi_hat
+    alpha_hat <- 1 - (posterior$c) ^ 2 * psi_hat / 2
+  }
+
+  beta <- calculate_beta(
+    model_type = first_stage$model_type,
+    coefficients = first_stage$coefficients,
+    posterior = posterior,
+    alpha = alpha_hat
+  )
 
   # --- Delta method for vcov and CI ---
   gamma_hat <- first_stage$coefficients$gamma
@@ -66,7 +77,6 @@ hapr_second_stage <- function(
   vcov_gamma <- first_stage$coefficients$vcov_gamma
   vcov_theta <- first_stage$coefficients$vcov_theta
 
-  # Sort for alignment
   gamma_hat <- gamma_hat[order(names(gamma_hat))]
   theta_hat <- theta_hat[order(names(theta_hat))]
   vcov_gamma <- vcov_gamma[order(rownames(vcov_gamma)), order(colnames(vcov_gamma))]
@@ -87,9 +97,12 @@ hapr_second_stage <- function(
     theta <- params[(ng + 1):(ng + nt)]
     names(gamma) <- names(gamma_hat)
     names(theta) <- names(theta_hat)
-    out <- calculate_beta(first_stage$model_type,
-                          list(gamma = gamma, theta = theta),
-                          posterior)
+    out <- calculate_beta(
+      model_type = first_stage$model_type,
+      coefficients = list(gamma = gamma, theta = theta, psi_hat = first_stage$coefficients$psi_hat),
+      posterior = posterior,
+      alpha = alpha_hat
+    )
     out[order(names(out))]
   }
 
@@ -106,7 +119,6 @@ hapr_second_stage <- function(
   sd_beta <- sqrt(diag(vcov_beta))
   names(sd_beta) <- names(beta)
 
-  # Delta method
   z <- qnorm(0.975)
   ci_beta <- data.frame(
     Estimate = beta,
@@ -117,10 +129,7 @@ hapr_second_stage <- function(
     check.names = FALSE
   )
 
-  # Create model for y_on_gf_w
   y_on_gf_w <- first_stage$regressions$y_on_gc_w
-
-  # Update model coefficients
   y_on_gf_w$coefficients <- beta
   y_on_gf_w$vcov_coefficients <- vcov_beta
   y_on_gf_w$stripped_model$coefficients <- beta
@@ -143,46 +152,32 @@ hapr_second_stage <- function(
     additional_parameters$baseline_hazard <- baseline_hazard
   }
 
-  # Clean up not needed parts of y_on_gf_w based on model type
   if (first_stage$model_type == "cox") {
-    y_on_gf_w$stripped_model$var <- NULL
-    y_on_gf_w$stripped_model$iter <- NULL
-    y_on_gf_w$stripped_model$means <- NULL
-    y_on_gf_w$stripped_model$method <- NULL
-    y_on_gf_w$stripped_model$assign <- NULL
-    y_on_gf_w$stripped_model$timefix <- NULL
-    y_on_gf_w$stripped_model$formula <- NULL
-    y_on_gf_w$stripped_model$xlevels <- NULL
-    y_on_gf_w$stripped_model$contrasts <- NULL
-    y_on_gf_w$stripped_model$formula <- NULL
+    y_on_gf_w$stripped_model[c("var", "iter", "means", "method", "assign",
+                               "timefix", "formula", "xlevels", "contrasts")] <- NULL
   } else if (first_stage$model_type == "lm") {
-    y_on_gf_w$stripped_model$rank <- NULL
-    y_on_gf_w$stripped_model$assign <- NULL
-    y_on_gf_w$stripped_model$qr <- NULL
-    y_on_gf_w$stripped_model$df.residual <- NULL
-    y_on_gf_w$stripped_model$contrasts <- NULL
-    y_on_gf_w$stripped_model$xlevels <- NULL
-    y_on_gf_w$stripped_model$call <- NULL
-    y_on_gf_w$stripped_model$terms <- NULL
+    y_on_gf_w$stripped_model[c("rank", "assign", "qr", "df.residual",
+                               "contrasts", "xlevels", "call", "terms")] <- NULL
   } else if (first_stage$model_type == "probit") {
-    y_on_gf_w$stripped_model$R <- NULL
-    y_on_gf_w$stripped_model$rank <- NULL
-    y_on_gf_w$stripped_model$deviance <- NULL
-    y_on_gf_w$stripped_model$aic <- NULL
-    y_on_gf_w$stripped_model$null.deviance <- NULL
-    y_on_gf_w$stripped_model$iter <- NULL
-    y_on_gf_w$stripped_model$df.residual <- NULL
-    y_on_gf_w$stripped_model$df.null <- NULL
-    y_on_gf_w$stripped_model$converged <- NULL
-    y_on_gf_w$stripped_model$boundary <- NULL
-    y_on_gf_w$stripped_model$call <- NULL
-    y_on_gf_w$stripped_model$formula <- NULL
-    y_on_gf_w$stripped_model$terms <- NULL
-    y_on_gf_w$stripped_model$offset <- NULL
-    y_on_gf_w$stripped_model$control <- NULL
-    y_on_gf_w$stripped_model$contrasts <- NULL
-    y_on_gf_w$stripped_model$xlevels <- NULL
-    y_on_gf_w$stripped_model$qr <- NULL
+    y_on_gf_w$stripped_model[c("R", "rank", "deviance", "aic", "null.deviance", "iter",
+                               "df.residual", "df.null", "converged", "boundary", "call",
+                               "formula", "terms", "offset", "control", "contrasts", "xlevels", "qr")] <- NULL
+  }
+
+  stats_list <- list(
+    var_v = var_v,
+    var_epsilon = var_epsilon,
+    posterior = posterior,
+    improvement_ratio = improvement_ratio,
+    r2_current = r2_current,
+    r2_future = r2_future,
+    heritability_source = heritability_source,
+    r2_current_source = r2_current_source
+  )
+
+  if (first_stage$model_type == "cox") {
+    stats_list$psi_hat <- psi_hat
+    stats_list$alpha_hat <- alpha_hat
   }
 
   result <- list(
@@ -193,39 +188,30 @@ hapr_second_stage <- function(
     vcov_beta = vcov_beta,
     ci_beta = ci_beta,
     additional_parameters = additional_parameters,
-    stats = c(first_stage$stats, list(
-      var_v = var_v,
-      var_epsilon = var_epsilon,
-      posterior = posterior,
-      improvement_ratio = improvement_ratio,
-      r2_current = r2_current,
-      r2_future = r2_future,
-      heritability_source = heritability_source,
-      r2_current_source = r2_current_source
-    ))
+    stats = c(first_stage$stats, stats_list)
   )
   class(result) <- "hapr_fit"
   result
 }
 
-
 #' Calculate beta coefficients based on model type
 #'
 #' @param model_type The type of model ("lm", "probit" or "cox")
-#' @param coefficients A list containing gamma and theta coefficients
+#' @param coefficients A list containing gamma and theta coefficients (and psi_hat for cox)
 #' @param posterior The posterior values from the abc function
+#' @param alpha Optional alpha softmax correction, is only passed for cox model.
 #' @return A named numeric vector of beta coefficients
-calculate_beta <- function(model_type, coefficients, posterior) {
+calculate_beta <- function(model_type, coefficients, posterior, alpha = NULL) {
   gamma <- coefficients$gamma
   theta <- coefficients$theta
-  beta <- gamma  # default fallback
+  beta <- gamma
 
   i_gc <- which(names(gamma) == "gc")
   i_other <- which(names(gamma) != "gc")
 
   if (model_type == "lm") {
     beta[i_gc] <- gamma[i_gc] / posterior$a
-    stopifnot(all(names(theta) == names(gamma[i_other])))  # ensure alignment
+    stopifnot(all(names(theta) == names(gamma[i_other])))
     beta[i_other] <- gamma[i_other] - beta[i_gc] * posterior$b * theta
 
   } else if (model_type == "probit") {
@@ -236,10 +222,8 @@ calculate_beta <- function(model_type, coefficients, posterior) {
       posterior$b * theta * beta[i_gc]
 
   } else if (model_type == "cox") {
-    # Jon's softmax correction (in CLT case alpha = 1 so no correction).
-    psi_hat <- coefficients$psi_hat
-    alpha_hat <- 1 - (posterior$c) ^ 2 * psi_hat / 2
-    gamma <- gamma / alpha_hat
+    if (is.null(alpha)) stop("Alpha must be provided for Cox model.")
+    gamma <- gamma / alpha
 
     theta_intercept <- theta[1]
     theta_others <- theta[-1]
@@ -248,6 +232,5 @@ calculate_beta <- function(model_type, coefficients, posterior) {
   }
 
   names(beta)[i_gc] <- "gf"
-  beta <- beta[order(names(beta))]
-  beta
+  beta[order(names(beta))]
 }

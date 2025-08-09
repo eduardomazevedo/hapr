@@ -193,3 +193,21 @@ test_that("aggregation computes average curve and CIs", {
   expect_true(all(sf$surv_avg_upper >= sf$surv_avg))
   expect_true(all(sf$surv_avg >= sf$surv_avg_lower))
 })
+
+# ---- softmax_correction options smoke test ----
+test_that("hapr (cox) runs without error for all softmax_correction options", {
+  sim <- simulate_mock_dataset(n = 200, seed = 42)
+  for (opt in c("clt", "softmax-fast", "softmax-slow")) {
+    expect_error(
+      hapr(
+        y = sim$y,
+        gc = sim$gc,
+        w = sim$w,
+        model_type = "cox",
+        improvement_ratio = sim$true_improvement_ratio,
+        softmax_correction = opt
+      ),
+      NA
+    )
+  }
+})

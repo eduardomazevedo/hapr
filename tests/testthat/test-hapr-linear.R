@@ -81,6 +81,7 @@ test_that("hapr structure and types are correct (linear, fast)", {
 
 # ---- NUMERICAL ACCURACY TESTS (use large n) ----
 test_that("hapr estimates coefficients correctly across parameter grid (linear)", {
+  set.seed(123)
   param_grid <- expand.grid(
     n = c(10000, 10000),
     var_v = c(0.2, 0.3),
