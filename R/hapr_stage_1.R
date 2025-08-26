@@ -1,9 +1,11 @@
 #' HAPR first stage fit
 #'
 #' @description
-#' Fits the first stage of the HAPR model given the outcome y, PRS gc, and control variables w.
-#' Returns Cov(gamma, theta) placeholder (currently NULL, can be extended with bootstrap).
+#' Fits the first stage of the HARP model given the outcome y, PRS gc, and control variables w.
 #'
+#' @details
+#' This returns a first stage fit, which does not need to assume an improvement ratio. Run
+#' hapr_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
 #' @param y Outcome variable
 #' @param gc Polygenic risk score (normalized by preprocess)
 #' @param w Data frame of control variables
