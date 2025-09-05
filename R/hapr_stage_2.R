@@ -1,4 +1,13 @@
 #' HAPR second stage fit
+#' #'
+#' @description
+#' Fits the full HAPR model given the first stage fit and an improvement ratio or r2_future.
+#'
+#' @param first_stage A hapr_first_stage_fit object
+#' @param improvement_ratio Ratio to extrapolate by (optional if r2_future supplied)
+#' @param r2_current Optional R² of the current fit
+#' @param r2_future Optional R² of the future fit (implies improvement_ratio)
+#' @return A hapr_fit object
 #' Fits the full HAPR model given the first stage fit and an improvement ratio.
 #' @export
 hapr_second_stage <- function(first_stage,
@@ -10,12 +19,13 @@ hapr_second_stage <- function(first_stage,
   }
 
   if (is.null(improvement_ratio) && is.null(r2_future)) {
-    stop("Need improvement_ratio or r2_future.")
+    stop("Need improvement_ratio or r2_future must be specified.")
   }
   if (!is.null(improvement_ratio) && !is.null(r2_future)) {
     stop("Only one of improvement_ratio or r2_future should be provided.")
   }
 
+  # R² bookkeeping
   if (is.null(r2_current)) {
     r2_current <- tryCatch(as.numeric(first_stage$regressions$y_on_gc$r2), error = function(e) NA_real_)
     if (first_stage$model_type == "cox") r2_current <- NA_real_
@@ -41,6 +51,7 @@ hapr_second_stage <- function(first_stage,
   # map to beta
   beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
 
+  # --- Delta method variance ---
   gamma_hat <- first_stage$coefficients$gamma
   theta_hat <- first_stage$coefficients$theta
 
@@ -108,7 +119,10 @@ hapr_second_stage <- function(first_stage,
 
 # ---- internal helper: calculate_beta -----------------------------------------
 
-#' @noRd
+#' Calculate beta coefficients based on model type
+#'
+#' Internal helper used by hapr_second_stage().
+#' @keywords internal
 calculate_beta <- function(model_type, coefficients, posterior) {
   gamma <- coefficients$gamma
   theta <- coefficients$theta

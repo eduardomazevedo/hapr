@@ -1,12 +1,23 @@
-#' HAPR first stage fit
-#' Fits the first stage of the HARP model given y, PRS gc, and controls w.
+#'
+#' @description
+#' @details
+#' This returns a first stage fit, which does not need to assume an improvement ratio. Run
+#' hapr_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
+#' @param y Outcome variable
+#' @param gc Polygenic risk score (normalized by preprocess)
+#' @param w Data frame of control variables
+#' @param model_type "lm", "probit", or "cox"
+#' @return A hapr_first_stage_fit object
 #' @export
+#' Fits the first stage of the HARP model given the outcome y, PRS gc, and control variables w.
+#'
 hapr_first_stage <- function(y, gc, w, model_type) {
+  # Preprocess inputs
   preprocessed <- preprocess(y, gc, w, model_type = model_type)
   y  <- preprocessed$y
   gc <- preprocessed$gc
   w  <- preprocessed$w
-
+  # Define regression function by model type
   if (model_type == "lm") {
     regression_function <- function(data) strip_lm(stats::lm(y ~ ., data = data))
   } else if (model_type == "probit") {
@@ -24,6 +35,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     stop("Unsupported model_type: ", model_type)
   }
 
+  # Run regressions
   regressions <- list(
     gc_on_w    = strip_lm(stats::lm(gc ~ ., data = w)),
     y_on_w     = regression_function(w),
@@ -32,7 +44,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     y_on_gf_w  = regression_function(cbind(gf = gc, w))
   )
 
-  # extract and align
+  # Coefficients and vcovs
   gamma <- regressions$y_on_gc_w$coefficients
   theta <- regressions$gc_on_w$coefficients
   vcov_gamma <- if (model_type == "cox") stats::vcov(regressions$y_on_gc_w$model)
@@ -55,7 +67,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     vcov_gamma_theta = NULL
   )
 
-  # Summary statistics (numerically stable, no warnings)
+  # Summary statistics
   v_raw <- regressions$gc_on_w$sigma_squared
   eps_cap  <- 1e-9
   v_clamped <- min(1 - eps_cap, max(0, v_raw))
