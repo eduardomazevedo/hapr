@@ -1,87 +1,90 @@
 #' HAPR second stage fit
-#'
-#' @description
-#' Fits the full HAPR model given the first stage fit and an improvement ratio or r2_future.
-#'
-#' @param first_stage A hapr_first_stage_fit object
-#' @param improvement_ratio Ratio to extrapolate by (optional if r2_future supplied)
-#' @param r2_current Optional R² of the current fit
-#' @param r2_future Optional R² of the future fit (implies improvement_ratio)
-#' @return A hapr_fit object
+#' Fits the full HAPR model given the first stage fit and an improvement ratio.
 #' @export
-hapr_second_stage <- function(
-    first_stage,
-    improvement_ratio = NULL,
-    r2_current = NULL,
-    r2_future = NULL
-) {
+hapr_second_stage <- function(first_stage,
+                              improvement_ratio = NULL,
+                              r2_current = NULL,
+                              r2_future = NULL) {
   if (!inherits(first_stage, "hapr_first_stage_fit")) {
     stop("first_stage must be a hapr_first_stage_fit object.")
   }
+
   if (is.null(improvement_ratio) && is.null(r2_future)) {
-    stop("Either improvement_ratio or r2_future must be specified.")
+    stop("Need improvement_ratio or r2_future.")
   }
   if (!is.null(improvement_ratio) && !is.null(r2_future)) {
     stop("Only one of improvement_ratio or r2_future should be provided.")
   }
 
-  # R² bookkeeping
   if (is.null(r2_current)) {
-    r2_current <- first_stage$regressions$y_on_gc$r2 |> as.numeric()
-    if (first_stage$model_type == "cox") r2_current <- NA
+    r2_current <- tryCatch(as.numeric(first_stage$regressions$y_on_gc$r2), error = function(e) NA_real_)
+    if (first_stage$model_type == "cox") r2_current <- NA_real_
   }
   if (is.null(r2_future)) {
-    r2_future <- if (first_stage$model_type == "cox") NA else improvement_ratio * r2_current
+    r2_future <- if (is.na(r2_current)) NA_real_ else improvement_ratio * r2_current
   } else {
     improvement_ratio <- r2_future / r2_current
   }
 
-  if (!is.na(improvement_ratio) &&
-      improvement_ratio >= first_stage$stats$max_improvement_ratio) {
-    stop("Improvement ratio too large")
+  # tolerate tiny round-off at the boundary
+  tol <- 1e-12
+  max_ir <- first_stage$stats$max_improvement_ratio
+  if (is.finite(max_ir) && improvement_ratio >= max_ir - tol) {
+    stop("Improvement ratio too large.")
   }
 
+  # posterior pieces
   var_epsilon <- 1 - 1 / improvement_ratio
   var_v <- first_stage$stats$var_v_plus_var_epsilon - var_epsilon
   posterior <- abc(var_epsilon, var_v)
 
-  # Beta estimates
+  # map to beta
   beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
 
-  # --- Delta method variance ---
   gamma_hat <- first_stage$coefficients$gamma
   theta_hat <- first_stage$coefficients$theta
-  vcov_gamma <- first_stage$coefficients$vcov_gamma
-  vcov_theta <- first_stage$coefficients$vcov_theta
 
+  # canonical order for delta method
+  param_names <- c(names(gamma_hat), names(theta_hat))
+  param_hat   <- stats::setNames(c(gamma_hat, theta_hat), param_names)
+
+  Vg <- first_stage$coefficients$vcov_gamma
+  Vt <- first_stage$coefficients$vcov_theta
   ng <- length(gamma_hat); nt <- length(theta_hat)
-  vcov_full <- matrix(0, ng+nt, ng+nt)
-  vcov_full[1:ng, 1:ng] <- vcov_gamma
-  vcov_full[(ng+1):(ng+nt), (ng+1):(ng+nt)] <- vcov_theta
 
-  param_hat <- c(gamma_hat, theta_hat)
-  names(param_hat) <- c(names(gamma_hat), names(theta_hat))
+  vcov_full <- matrix(0, ng + nt, ng + nt)
+  rownames(vcov_full) <- colnames(vcov_full) <- param_names
+  vcov_full[names(gamma_hat), names(gamma_hat)] <- Vg
+  vcov_full[names(theta_hat), names(theta_hat)] <- Vt
 
-  beta_wrapper <- function(params) {
-    gamma <- params[1:ng]; theta <- params[(ng+1):(ng+nt)]
-    names(gamma) <- names(gamma_hat); names(theta) <- names(theta_hat)
-    calculate_beta(first_stage$model_type, list(gamma=gamma, theta=theta), posterior)
+  beta_wrapper <- function(par) {
+    gamma <- par[seq_len(ng)]; names(gamma) <- names(gamma_hat)
+    theta <- par[ng + seq_len(nt)]; names(theta) <- names(theta_hat)
+    calculate_beta(first_stage$model_type, list(gamma = gamma, theta = theta), posterior)
   }
 
   J <- numDeriv::jacobian(beta_wrapper, param_hat)
+  rownames(J) <- names(beta_wrapper(param_hat))
+  colnames(J) <- param_names
+
   vcov_beta <- J %*% vcov_full %*% t(J)
-  sd_beta <- sqrt(diag(vcov_beta))
-  names(sd_beta) <- names(beta)
+  sd_beta <- sqrt(diag(vcov_beta)); names(sd_beta) <- rownames(J)
 
   z <- stats::qnorm(0.975)
   ci_beta <- data.frame(
-    Estimate = beta,
+    Estimate  = beta[rownames(J)],
     Std.Error = sd_beta,
-    Lower = beta - z*sd_beta,
-    Upper = beta + z*sd_beta,
-    row.names = names(beta),
+    Lower     = beta[rownames(J)] - z * sd_beta,
+    Upper     = beta[rownames(J)] + z * sd_beta,
+    row.names = rownames(J),
     check.names = FALSE
   )
+
+  # update stripped models (if present)
+  if (!is.null(first_stage$regressions$y_on_gf_w$stripped_model)) {
+    first_stage$regressions$y_on_gf_w$stripped_model$coefficients <- beta
+  }
+  first_stage$regressions$y_on_gc_w$coefficients <- beta
 
   result <- list(
     model_type = first_stage$model_type,
@@ -103,34 +106,60 @@ hapr_second_stage <- function(
   result
 }
 
-#' Calculate beta coefficients based on model type
-#'
-#' Internal helper used by hapr_second_stage().
-#' @keywords internal
+# ---- internal helper: calculate_beta -----------------------------------------
+
+#' @noRd
 calculate_beta <- function(model_type, coefficients, posterior) {
   gamma <- coefficients$gamma
   theta <- coefficients$theta
-  beta <- gamma
 
-  i_gc <- which(names(gamma) == "gc")
-  i_other <- which(names(gamma) != "gc")
+  i_gc    <- which(names(gamma) == "gc")
+  i_other <- setdiff(seq_along(gamma), i_gc)
+
+  beta <- gamma
 
   if (model_type == "lm") {
     beta[i_gc] <- gamma[i_gc] / posterior$a
-    stopifnot(all(names(theta) == names(gamma[i_other])))
-    beta[i_other] <- gamma[i_other] - beta[i_gc] * posterior$b * theta
+    theta_others <- theta[names(theta) != "(Intercept)"]
+    common <- intersect(names(gamma)[i_other], names(theta_others))
+    if (length(common)) {
+      beta[i_other][common] <- gamma[i_other][common] -
+        posterior$b * theta_others[common] * as.numeric(beta[i_gc])
+      if (length(setdiff(names(gamma)[i_other], common))) {
+        beta[i_other][setdiff(names(gamma)[i_other], common)] <-
+          gamma[i_other][setdiff(names(gamma)[i_other], common)]
+      }
+    } else {
+      beta[i_other] <- gamma[i_other]
+    }
 
   } else if (model_type == "probit") {
-    sqrt_input <- posterior$a^2 - (gamma[i_gc]^2) * (posterior$c^2)
+    sqrt_input <- posterior$a^2 - (as.numeric(gamma[i_gc])^2) * (posterior$c^2)
     if (sqrt_input < 0) stop("Invalid posterior parameters: sqrt_input is negative")
-    beta[i_gc] <- gamma[i_gc] / sqrt(sqrt_input)
-    beta[i_other] <- gamma[i_other] * sqrt(1 + (posterior$c^2) * beta[i_gc]^2) -
-      posterior$b * theta * beta[i_gc]
+    beta[i_gc] <- as.numeric(gamma[i_gc]) / sqrt(sqrt_input)
+    scale <- sqrt(1 + (posterior$c^2) * (as.numeric(beta[i_gc])^2))
+    beta[i_other] <- gamma[i_other] * scale
+    theta_others <- theta[names(theta) != "(Intercept)"]
+    common <- intersect(names(gamma)[i_other], names(theta_others))
+    if (length(common)) {
+      beta[i_other][common] <- beta[i_other][common] -
+        posterior$b * theta_others[common] * as.numeric(beta[i_gc])
+    }
 
   } else if (model_type == "cox") {
-    theta_others <- theta[-1]
     beta[i_gc] <- gamma[i_gc] / posterior$a
-    beta[i_other] <- gamma[i_other] - beta[i_gc] * posterior$b * theta_others
+    theta_others <- theta[-1]
+    common <- intersect(names(gamma)[i_other], names(theta_others))
+    if (length(common)) {
+      beta[i_other][common] <- gamma[i_other][common] -
+        posterior$b * theta_others[common] * as.numeric(beta[i_gc])
+      if (length(setdiff(names(gamma)[i_other], common))) {
+        beta[i_other][setdiff(names(gamma)[i_other], common)] <-
+          gamma[i_other][setdiff(names(gamma)[i_other], common)]
+      }
+    } else {
+      beta[i_other] <- gamma[i_other]
+    }
   }
 
   names(beta)[i_gc] <- "gf"
