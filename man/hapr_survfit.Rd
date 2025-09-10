@@ -4,7 +4,17 @@
 \alias{hapr_survfit}
 \title{Create a survival fit from a HAPR Cox model}
 \usage{
-hapr_survfit(fit, covariates = "gf_w", newdata)
+hapr_survfit(
+  fit,
+  covariates = "gf_w",
+  newdata,
+  start.time = NULL,
+  aggregate = NULL,
+  conf.int = FALSE,
+  conf.level = 0.95,
+  conf.method = c("bootstrap"),
+  n.boot = 200
+)
 }
 \arguments{
 \item{fit}{A hapr_fit object from a Cox model}

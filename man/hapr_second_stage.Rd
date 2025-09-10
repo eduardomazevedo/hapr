@@ -14,15 +14,16 @@ hapr_second_stage(
 \arguments{
 \item{first_stage}{A hapr_first_stage_fit object}
 
-\item{improvement_ratio}{The ratio to extrapolate by}
+\item{improvement_ratio}{The ratio to extrapolate by (optional if r2_future supplied)}
 
-\item{r2_current}{The R-squared of the current fit}
+\item{r2_current}{The R-squared of the current fit (optional)}
 
-\item{r2_future}{The R-squared of the future fit}
+\item{r2_future}{The R-squared of the future fit (optional; implies improvement_ratio)}
 }
 \value{
-A hapr_lm_fit object containing the results of the second stage
+A hapr_fit object
 }
 \description{
-Fits the full HARP model given the first stage fit and an improvement ratio.
+Fits the full HAPR model given the first stage fit and an improvement ratio (or r2_future).
+Uses Cov(gamma, theta) in the delta-method variance to avoid SE inflation.
 }

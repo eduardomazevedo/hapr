@@ -4,24 +4,25 @@
 \alias{hapr_first_stage}
 \title{HAPR first stage fit}
 \usage{
-hapr_first_stage(y, gc, w, model_type)
+hapr_first_stage(y, gc, w, model_type, B_cross = 200L, seed = NULL)
 }
 \arguments{
-\item{y}{Outcome variable}
+\item{y}{Outcome variable (numeric for lm; 2-level factor/logical/numeric for probit; Surv for cox)}
 
-\item{gc}{Polygenic risk score (has to be normalized)}
+\item{gc}{Polygenic risk score (will be normalized by preprocess)}
 
-\item{w}{Control variables}
+\item{w}{Data frame of control variables (must not contain 'gc' or 'gf')}
 
 \item{model_type}{"lm", "probit", or "cox"}
+
+\item{B_cross}{integer bootstrap draws for cross-covariance (default 200)}
+
+\item{seed}{optional integer seed for reproducibility}
 }
 \value{
-A hapr_first_stage_fit object containing the results of the first stage.
+A hapr_first_stage_fit object
 }
 \description{
-Fits the first stage of the HARP model given the outcome y, PRS gc, and control variables w.
-}
-\details{
-This returns a first stage fit, which does not need to assume an improvement ratio. Run
-hapr_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
+Fits the first stage of the HAPR model given the outcome y, PRS gc, and control variables w.
+Returns Cov(gamma, theta) to enable correct delta-method SEs in stage 2.
 }
