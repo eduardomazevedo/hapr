@@ -54,7 +54,7 @@ hapr_second_stage <- function(
   }
 
   var_epsilon <- 1 - 1 / improvement_ratio
-  var_v <- first_stage$stats$var_v_plus_var_epsilon - var_epsilon
+  var_v <- first_stage$coefficients$var_v_plus_var_epsilon - var_epsilon
   posterior <- abc(var_epsilon, var_v)
 
   beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
@@ -62,14 +62,16 @@ hapr_second_stage <- function(
   # --- Delta method for vcov and CI ---
   gamma_hat <- first_stage$coefficients$gamma
   theta_hat <- first_stage$coefficients$theta
-  vcov_gamma <- first_stage$coefficients$vcov_gamma
-  vcov_theta <- first_stage$coefficients$vcov_theta
+  vcov_gamma <- first_stage$vcov_coefficients$gamma
+  vcov_theta <- first_stage$vcov_coefficients$theta
 
-  # Sort for alignment
-  gamma_hat <- gamma_hat[order(names(gamma_hat))]
-  theta_hat <- theta_hat[order(names(theta_hat))]
-  vcov_gamma <- vcov_gamma[order(rownames(vcov_gamma)), order(colnames(vcov_gamma))]
-  vcov_theta <- vcov_theta[order(rownames(vcov_theta)), order(colnames(vcov_theta))]
+  # Store names
+  names_gamma <- names(gamma_hat)
+  names_theta <- names(theta_hat)
+  stopifnot(all.equal(names_gamma, rownames(vcov_gamma)))
+  stopifnot(all.equal(names_theta, rownames(vcov_theta)))
+  stopifnot(all.equal(names_gamma, colnames(vcov_gamma)))
+  stopifnot(all.equal(names_theta, colnames(vcov_theta)))
 
   param_hat <- c(gamma_hat, theta_hat)
   names(param_hat) <- c(names(gamma_hat), names(theta_hat))
@@ -89,19 +91,13 @@ hapr_second_stage <- function(
     out <- calculate_beta(first_stage$model_type,
                           list(gamma = gamma, theta = theta),
                           posterior)
-    out[order(names(out))]
   }
 
   J_raw <- numDeriv::jacobian(beta_wrapper, param_hat)
   rownames(J_raw) <- names(beta_wrapper(param_hat))
   colnames(J_raw) <- names(param_hat)
 
-  J <- J_raw[match(names(beta), rownames(J_raw)),
-             match(names(param_hat), colnames(J_raw))]
-  vcov_ordered <- vcov_full[match(names(param_hat), rownames(vcov_full)),
-                            match(names(param_hat), colnames(vcov_full))]
-
-  vcov_beta <- J %*% vcov_ordered %*% t(J)
+  vcov_beta <- J_raw %*% vcov_full %*% t(J_raw)
   sd_beta <- sqrt(diag(vcov_beta))
   names(sd_beta) <- names(beta)
 
@@ -186,10 +182,16 @@ hapr_second_stage <- function(
 
   result <- list(
     model_type = first_stage$model_type,
-    regressions = c(first_stage$regressions, list(y_on_gf_w = y_on_gf_w)),
-    coefficients = c(first_stage$coefficients, list(beta = beta)),
+    regressions = c(
+      first_stage$regressions,
+      list(y_on_gf_w = y_on_gf_w)),
+    coefficients = c(
+      first_stage$coefficients,
+      list(beta = beta)),
+    vcov_coefficients = c(
+      first_stage$vcov_coefficients,
+      list(beta = vcov_beta)),
     standard_errors = sd_beta,
-    vcov_beta = vcov_beta,
     ci_beta = ci_beta,
     additional_parameters = additional_parameters,
     stats = c(first_stage$stats, list(

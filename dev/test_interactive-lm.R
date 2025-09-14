@@ -61,8 +61,7 @@ fitted_beta_mat <- matrix(NA, nrow = n_sim, ncol = length(beta_names))
 colnames(covered_matrix) <- colnames(fitted_beta_mat) <- beta_names
 
 for (i in 1:n_sim) {
-  if (i %% 50 == 0) cat("Simulation", i, "\n")
-
+  if (i %% 200 == 0) cat("Simulation", i, "\n")
   sim_data <- create_simulated_dataset(params = list(seed = i))
 
   fit <- hapr(

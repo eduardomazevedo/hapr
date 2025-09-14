@@ -44,27 +44,24 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   # Extract coefficients
   coefficients <- list(
     theta = regressions$gc_on_w$coefficients,
-    vcov_theta = regressions$gc_on_w$vcov_coefficients,
-    gamma = regressions$y_on_gc_w$coefficients,
-    vcov_gamma = {
-      if (model_type == "cox") {
-        # Use full Cox model for vcov
-        regressions$y_on_gc_w$vcov_coefficients
-      } else {
-        regressions$y_on_gc_w$vcov_coefficients
-      }
-    }
+    var_v_plus_var_epsilon = regressions$gc_on_w$sigma_squared,
+    gamma = regressions$y_on_gc_w$coefficients
+  )
+
+  vcov_coefficients <- list(
+    theta = regressions$gc_on_w$vcov_coefficients,
+    var_v_plus_var_epsilon = regressions$gc_on_w$sigma_squared^2 * 2 / (nrow(w) - length(regressions$gc_on_w$coefficients)),
+    gamma = regressions$y_on_gc_w$vcov_coefficients
   )
   
   # Summary statistics
   stats <- list(
-    var_v_plus_var_epsilon = regressions$gc_on_w$sigma_squared,
     max_improvement_ratio = 1 / (1 - regressions$gc_on_w$sigma_squared),
     var_wtheta = regressions$gc_on_w$explained_variance
   )
-  if (stats$var_v_plus_var_epsilon > 1) {
+  if (coefficients$var_v_plus_var_epsilon > 1) {
     warning("The variance of v plus epsilon is numerically greater than 1.")
-    stats$var_v_plus_var_epsilon <- pmin(1 - stats$var_wtheta, 1)
+    coefficients$var_v_plus_var_epsilon <- pmin(1 - stats$var_wtheta, 1)
     stats$max_improvement_ratio <- Inf
   }
   
@@ -73,6 +70,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     model_type = model_type,
     regressions = regressions,
     coefficients = coefficients,
+    vcov_coefficients = vcov_coefficients,
     stats = stats
   )
   class(result) <- "hapr_first_stage_fit"
