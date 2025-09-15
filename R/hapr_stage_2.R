@@ -53,17 +53,20 @@ hapr_second_stage <- function(
                  first_stage$stats$max_improvement_ratio))
   }
 
-  var_epsilon <- 1 - 1 / improvement_ratio
-  var_v <- first_stage$coefficients$var_v_plus_var_epsilon - var_epsilon
-  posterior <- abc(var_epsilon, var_v)
+  derived_parameters <- calculate_parameters(first_stage$model_type, first_stage$coefficients, improvement_ratio)
 
-  beta <- calculate_beta(first_stage$model_type, first_stage$coefficients, posterior)
+  beta <- derived_parameters$beta
+  var_v <- derived_parameters$var_v
+  var_epsilon <- derived_parameters$var_epsilon
+  posterior <- derived_parameters$posterior
 
   # --- Delta method for vcov and CI ---
   gamma_hat <- first_stage$coefficients$gamma
   theta_hat <- first_stage$coefficients$theta
+  var_v_plus_var_epsilon_hat <- first_stage$coefficients$var_v_plus_var_epsilon
   vcov_gamma <- first_stage$vcov_coefficients$gamma
   vcov_theta <- first_stage$vcov_coefficients$theta
+  vcov_var_v_plus_var_epsilon <- first_stage$vcov_coefficients$var_v_plus_var_epsilon
 
   # Store names
   names_gamma <- names(gamma_hat)
@@ -73,24 +76,25 @@ hapr_second_stage <- function(
   stopifnot(all.equal(names_gamma, colnames(vcov_gamma)))
   stopifnot(all.equal(names_theta, colnames(vcov_theta)))
 
-  param_hat <- c(gamma_hat, theta_hat)
-  names(param_hat) <- c(names(gamma_hat), names(theta_hat))
+  param_hat <- c(gamma_hat, theta_hat, var_v_plus_var_epsilon_hat)
+  names(param_hat) <- c(names(gamma_hat), names(theta_hat), "var_v_plus_var_epsilon")
   ng <- length(gamma_hat)
   nt <- length(theta_hat)
 
-  vcov_full <- matrix(0, ng + nt, ng + nt)
+  vcov_full <- matrix(0, ng + nt + 1, ng + nt + 1)
   vcov_full[1:ng, 1:ng] <- vcov_gamma
   vcov_full[(ng + 1):(ng + nt), (ng + 1):(ng + nt)] <- vcov_theta
+  vcov_full[(ng + nt + 1), (ng + nt + 1)] <- vcov_var_v_plus_var_epsilon
   rownames(vcov_full) <- colnames(vcov_full) <- names(param_hat)
 
   beta_wrapper <- function(params) {
     gamma <- params[1:ng]
     theta <- params[(ng + 1):(ng + nt)]
+    var_v_plus_var_epsilon <- params[ng + nt + 1]
     names(gamma) <- names(gamma_hat)
     names(theta) <- names(theta_hat)
-    out <- calculate_beta(first_stage$model_type,
-                          list(gamma = gamma, theta = theta),
-                          posterior)
+    derived_parameters <- calculate_parameters(first_stage$model_type, list(gamma = gamma, theta = theta, var_v_plus_var_epsilon = var_v_plus_var_epsilon), improvement_ratio)
+    derived_parameters$beta
   }
 
   J_raw <- numDeriv::jacobian(beta_wrapper, param_hat)
@@ -101,7 +105,7 @@ hapr_second_stage <- function(
   sd_beta <- sqrt(diag(vcov_beta))
   names(sd_beta) <- names(beta)
 
-  # Delta method
+  # Confidence intervals
   z <- qnorm(0.975)
   ci_beta <- data.frame(
     Estimate = beta,
@@ -216,7 +220,11 @@ hapr_second_stage <- function(
 #' @param coefficients A list containing gamma and theta coefficients
 #' @param posterior The posterior values from the abc function
 #' @return A named numeric vector of beta coefficients
-calculate_beta <- function(model_type, coefficients, posterior) {
+calculate_parameters <- function(model_type, coefficients, improvement_ratio) {
+  var_epsilon <- 1 - 1 / improvement_ratio
+  var_v <- coefficients$var_v_plus_var_epsilon - var_epsilon
+  posterior <- abc(var_epsilon, var_v)
+
   gamma <- coefficients$gamma
   theta <- coefficients$theta
   beta <- gamma  # default fallback
@@ -244,6 +252,10 @@ calculate_beta <- function(model_type, coefficients, posterior) {
   }
 
   names(beta)[i_gc] <- "gf"
-  beta <- beta[order(names(beta))]
-  beta
+  
+  list(
+    var_epsilon = var_epsilon,
+    var_v = var_v,
+    posterior = posterior,
+    beta = beta)
 }
