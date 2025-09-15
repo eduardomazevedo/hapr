@@ -48,9 +48,13 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     gamma = regressions$y_on_gc_w$coefficients
   )
 
+  # Calculate vcov of var_v_plus_var_epsilon
+  degrees_of_freedom <- regressions$gc_on_w$df_residual  # or df.residual(original_lm_object)
+  v_cov_var_v_plus_var_epsilon <- 2 * regressions$gc_on_w$sigma_squared^2 / degrees_of_freedom
+
   vcov_coefficients <- list(
     theta = regressions$gc_on_w$vcov_coefficients,
-    var_v_plus_var_epsilon = regressions$gc_on_w$sigma_squared^2 * 2 / (nrow(w) - length(regressions$gc_on_w$coefficients)),
+    var_v_plus_var_epsilon = v_cov_var_v_plus_var_epsilon,
     gamma = regressions$y_on_gc_w$vcov_coefficients
   )
   

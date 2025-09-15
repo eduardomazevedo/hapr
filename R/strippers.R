@@ -43,6 +43,9 @@ strip_lm <- function(fit) {
   # Variance of outcome variable
   outcome_variance <- var(fitted_values + residuals(fit))
 
+  # Degrees of freedom
+  df_residual <- df.residual(fit)
+
   fit$model <- NULL
   fit$y <- NULL
   fit$x <- NULL
@@ -60,6 +63,7 @@ strip_lm <- function(fit) {
     explained_variance = explained_variance,
     sigma_squared = sigma_squared,
     var_outcome = outcome_variance,
+    df_residual = df_residual,
     stripped_model = fit
   )
 }
