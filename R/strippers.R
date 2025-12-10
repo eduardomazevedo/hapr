@@ -53,6 +53,10 @@ strip_lm <- function(fit) {
   fit$weights <- NULL
   fit$data <- NULL
 
+  fit$call$data <- NULL        # remove data reference from call
+  environment(fit$terms) <- baseenv()
+  if (!is.null(fit$formula)) environment(fit$formula) <- baseenv()
+
   # Return everything in a clean list
   list(
     coefficients = coefficients,
@@ -112,6 +116,11 @@ strip_probit <- function(fit) {
   fit$data <- NULL
   fit$prior.weights <- NULL
 
+  fit$call$data <- NULL
+  ## wipe environments to break references
+  environment(fit$terms) <- baseenv()
+  if (!is.null(fit$formula)) environment(fit$formula) <- baseenv()
+  
   # Return simplified object
   list(
     coefficients = coefficients,
