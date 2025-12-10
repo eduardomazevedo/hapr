@@ -51,6 +51,7 @@ strip_lm <- function(fit) {
   fit$effects <- NULL
   fit$qr <- NULL
   fit$weights <- NULL
+  fit$data <- NULL
 
   # Return everything in a clean list
   list(
