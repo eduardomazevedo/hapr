@@ -24,18 +24,18 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   
   # Define regression function by model type
   if (model_type == "lm") {
-    regression_function <- function(data) strip_lm(lm(y ~ ., data = data))
+    regression_function <- function(data) fit_lm_lowlevel(y, data)
   } else if (model_type == "probit") {
-    regression_function <- function(data) strip_probit(glm(y ~ ., data = data, family = binomial(link = "probit")))
+    regression_function <- function(data) fit_probit_lowlevel(y, data)
   } else if (model_type == "cox") {
-    regression_function <- function(data) strip_cox(survival::coxph(y ~ ., data = data))
+    regression_function <- function(data) fit_cox_lowlevel(y, data)
   } else {
     stop("Unsupported model_type: ", model_type)
   }
   
-  # Run regressions
+  # Run regressions using low-level functions
   regressions <- list(
-    gc_on_w = strip_lm(lm(gc ~ ., data = w)),
+    gc_on_w = fit_lm_lowlevel(gc, w),
     y_on_w = regression_function(w),
     y_on_gc = regression_function(data.frame(gc = gc)),
     y_on_gc_w = regression_function(cbind(gc = gc, w))
@@ -49,7 +49,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   )
 
   # Calculate vcov of var_v_plus_var_epsilon
-  degrees_of_freedom <- regressions$gc_on_w$df_residual  # or df.residual(original_lm_object)
+  degrees_of_freedom <- regressions$gc_on_w$df_residual
   v_cov_var_v_plus_var_epsilon <- 2 * regressions$gc_on_w$sigma_squared^2 / degrees_of_freedom
 
   vcov_coefficients <- list(

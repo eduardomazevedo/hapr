@@ -116,13 +116,17 @@ hapr_second_stage <- function(
     check.names = FALSE
   )
 
-  # Create model for y_on_gf_w
+  # Create model for y_on_gf_w (copy from y_on_gc_w)
   y_on_gf_w <- first_stage$regressions$y_on_gc_w
 
   # Update model coefficients
   y_on_gf_w$coefficients <- beta
   y_on_gf_w$vcov_coefficients <- vcov_beta
-  y_on_gf_w$stripped_model$coefficients <- beta
+  
+  # Update names: change "gc" to "gf" in coefficient names
+  names(y_on_gf_w$coefficients)[names(y_on_gf_w$coefficients) == "gc"] <- "gf"
+  rownames(y_on_gf_w$vcov_coefficients)[rownames(y_on_gf_w$vcov_coefficients) == "gc"] <- "gf"
+  colnames(y_on_gf_w$vcov_coefficients)[colnames(y_on_gf_w$vcov_coefficients) == "gc"] <- "gf"
 
   additional_parameters <- list()
   if (first_stage$model_type == "lm") {
@@ -140,48 +144,6 @@ hapr_second_stage <- function(
 
     additional_parameters$base_hazard_conversion_ratio <- base_hazard_conversion_ratio
     additional_parameters$baseline_hazard <- baseline_hazard
-  }
-
-  # Clean up not needed parts of y_on_gf_w based on model type
-  if (first_stage$model_type == "cox") {
-    y_on_gf_w$stripped_model$var <- NULL
-    y_on_gf_w$stripped_model$iter <- NULL
-    y_on_gf_w$stripped_model$means <- NULL
-    y_on_gf_w$stripped_model$method <- NULL
-    y_on_gf_w$stripped_model$assign <- NULL
-    y_on_gf_w$stripped_model$timefix <- NULL
-    y_on_gf_w$stripped_model$formula <- NULL
-    y_on_gf_w$stripped_model$xlevels <- NULL
-    y_on_gf_w$stripped_model$contrasts <- NULL
-    y_on_gf_w$stripped_model$formula <- NULL
-  } else if (first_stage$model_type == "lm") {
-    y_on_gf_w$stripped_model$rank <- NULL
-    y_on_gf_w$stripped_model$assign <- NULL
-    y_on_gf_w$stripped_model$qr <- NULL
-    y_on_gf_w$stripped_model$df.residual <- NULL
-    y_on_gf_w$stripped_model$contrasts <- NULL
-    y_on_gf_w$stripped_model$xlevels <- NULL
-    y_on_gf_w$stripped_model$call <- NULL
-    y_on_gf_w$stripped_model$terms <- NULL
-  } else if (first_stage$model_type == "probit") {
-    y_on_gf_w$stripped_model$R <- NULL
-    y_on_gf_w$stripped_model$rank <- NULL
-    y_on_gf_w$stripped_model$deviance <- NULL
-    y_on_gf_w$stripped_model$aic <- NULL
-    y_on_gf_w$stripped_model$null.deviance <- NULL
-    y_on_gf_w$stripped_model$iter <- NULL
-    y_on_gf_w$stripped_model$df.residual <- NULL
-    y_on_gf_w$stripped_model$df.null <- NULL
-    y_on_gf_w$stripped_model$converged <- NULL
-    y_on_gf_w$stripped_model$boundary <- NULL
-    y_on_gf_w$stripped_model$call <- NULL
-    y_on_gf_w$stripped_model$formula <- NULL
-    y_on_gf_w$stripped_model$terms <- NULL
-    y_on_gf_w$stripped_model$offset <- NULL
-    y_on_gf_w$stripped_model$control <- NULL
-    y_on_gf_w$stripped_model$contrasts <- NULL
-    y_on_gf_w$stripped_model$xlevels <- NULL
-    y_on_gf_w$stripped_model$qr <- NULL
   }
 
   result <- list(

@@ -38,26 +38,52 @@ predict.hapr_fit <- function(object, newdata, covariates = c("w", "gc_w", "gf_w"
       next
     }
 
-    # Extract the stripped model for the covariate
-    model_obj <- fit$regressions[[model_key]]$stripped_model
+    # Extract regression object for the covariate
+    reg_obj <- fit$regressions[[model_key]]
+    
+    # Extract coefficients and terms
+    if (!"coefficients" %in% names(reg_obj)) {
+      stop(sprintf("The regression for '%s' has no 'coefficients'.", cov))
+    }
+    coefs <- reg_obj$coefficients
+    
+    if (!"terms" %in% names(reg_obj)) {
+      stop(sprintf("The regression for '%s' has no 'terms' object.", cov))
+    }
+    mt <- reg_obj$terms
+    xlevels <- reg_obj$xlevels
 
-    # Branch for Cox vs. LM/Probit
+    # Handle variable name mapping: if predicting with gf_w, terms object may reference gc
+    # but coefficients and newdata use gf
+    newdata_for_pred <- newdata
+    if (cov == "gf_w" && "gf" %in% names(newdata) && !"gc" %in% names(newdata)) {
+      # Temporarily rename gf to gc for model.frame (terms object expects gc)
+      newdata_for_pred <- newdata
+      newdata_for_pred$gc <- newdata_for_pred$gf
+      newdata_for_pred$gf <- NULL
+    }
+
+    # Build model matrix using terms object (properly handles factor levels)
+    # Delete response from terms for prediction
+    mt_pred <- delete.response(mt)
+    mf_new <- model.frame(mt_pred, data = newdata_for_pred, xlev = xlevels, na.action = na.pass)
+    X <- model.matrix(mt_pred, data = mf_new)
+
+    # Compute linear predictor - match coefficient names to column names
+    # For gf_w, coefficients have "gf" but X has "gc", so map them
+    X_colnames <- colnames(X)
+    if (cov == "gf_w" && "gc" %in% X_colnames && "gf" %in% names(coefs)) {
+      X_colnames[X_colnames == "gc"] <- "gf"
+      colnames(X) <- X_colnames
+    }
+    
+    common_vars <- intersect(names(coefs), colnames(X))
+    X_sub <- X[, common_vars, drop = FALSE]
+    coefs_sub <- coefs[common_vars]
+    Xbeta <- as.vector(X_sub %*% coefs_sub)
+
+    # Determine what to return based on model type and prediction type
     if (fit$model_type == "cox") {
-      # 1. Extract coefficients
-      if (!"coefficients" %in% names(model_obj)) {
-        stop(sprintf("The stripped Cox model for '%s' has no 'coefficients'.", cov))
-      }
-      coefs <- model_obj$coefficients
-
-      # 2. Build model matrix (handles factors automatically)
-      X <- model.matrix(~., data = newdata)
-
-      # 3. Compute linear predictor from matching columns
-      common_vars <- intersect(names(coefs), colnames(X))
-      X_sub <- X[, common_vars, drop = FALSE]
-      Xbeta <- as.vector(X_sub %*% coefs)
-
-      # 4. Determine what to return
       if (type == "lp") {
         results[[paste0("y_hat_", cov)]] <- Xbeta
       } else if (type %in% c("response", "risk")) {
@@ -66,50 +92,14 @@ predict.hapr_fit <- function(object, newdata, covariates = c("w", "gc_w", "gf_w"
         stop("For Cox models, `type` must be 'lp', 'response', or 'risk'.")
       }
     } else if (fit$model_type == "lm") {
-      # Manual prediction for lm models
-      # Validate type for lm models
       if (type != "response") {
         stop("For lm models, `type` must be 'response'.")
       }
-      
-      # 1. Extract coefficients
-      if (!"coefficients" %in% names(model_obj)) {
-        stop(sprintf("The stripped lm model for '%s' has no 'coefficients'.", cov))
-      }
-      coefs <- model_obj$coefficients
-
-      # 2. Build model matrix (handles factors automatically)
-      X <- model.matrix(~., data = newdata)
-
-      # 3. Compute linear predictor from matching columns
-      common_vars <- intersect(names(coefs), colnames(X))
-      X_sub <- X[, common_vars, drop = FALSE]
-      Xbeta <- as.vector(X_sub %*% coefs)
-
-      # 4. For lm, the response is the same as the linear predictor
       results[[paste0("y_hat_", cov)]] <- Xbeta
     } else if (fit$model_type == "probit") {
-      # Manual prediction for probit models
-      # Validate type for probit models
       if (!type %in% c("response", "link")) {
         stop("For probit models, `type` must be 'response' or 'link'.")
       }
-      
-      # 1. Extract coefficients
-      if (!"coefficients" %in% names(model_obj)) {
-        stop(sprintf("The stripped probit model for '%s' has no 'coefficients'.", cov))
-      }
-      coefs <- model_obj$coefficients
-
-      # 2. Build model matrix (handles factors automatically)
-      X <- model.matrix(~., data = newdata)
-
-      # 3. Compute linear predictor from matching columns
-      common_vars <- intersect(names(coefs), colnames(X))
-      X_sub <- X[, common_vars, drop = FALSE]
-      Xbeta <- as.vector(X_sub %*% coefs)
-
-      # 4. Determine what to return based on type
       if (type == "link") {
         results[[paste0("y_hat_", cov)]] <- Xbeta
       } else if (type == "response") {
