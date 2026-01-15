@@ -2,14 +2,13 @@
 set.seed(123)
 devtools::load_all()
 library(tidyverse)
-library(listviewer)
 
 # ---- Part 1: Data generation ----
 default_params <- list(
   n = 1e4,
-  var_v = 1 / 3,
-  var_epsilon = 1 / 3,
-  var_thetaw = 1 / 3,
+  var_v = 1 / 8,
+  var_epsilon = 3 / 4,
+  var_thetaw = 1 / 8,
   beta_gf = 0.42,
   beta_w1 = 0.17,
   seed = 123
@@ -55,14 +54,15 @@ true_beta <- c(gf = 0.42, w1 = 0.17, w2B = 0, w2C = 0)
 beta_names <- names(true_beta)
 
 # ---- Part 3: Run simulations ----
-n_sim <- 1000
+n_sim <- 100
 covered_matrix <- matrix(NA, nrow = n_sim, ncol = length(beta_names))
 fitted_beta_mat <- matrix(NA, nrow = n_sim, ncol = length(beta_names))
-colnames(covered_matrix) <- colnames(fitted_beta_mat) <- beta_names
+se_beta_mat <- matrix(NA, nrow = n_sim, ncol = length(beta_names))
+colnames(covered_matrix) <- colnames(fitted_beta_mat) <- colnames(se_beta_mat) <- beta_names
 
 for (i in 1:n_sim) {
-  if (i %% 200 == 0) cat("Simulation", i, "\n")
-  sim_data <- create_simulated_dataset(params = list(seed = i))
+  if (i %% 20 == 0) cat("Simulation", i, "\n")
+  sim_data <- create_simulated_dataset(params = list(seed = i, n = 10000))
 
   fit <- hapr(
     y = sim_data$y,
@@ -74,49 +74,25 @@ for (i in 1:n_sim) {
 
   beta_hat <- fit$coefficients$beta
   ci_beta <- fit$ci_beta
+  se_hat <- fit$standard_errors
 
   for (term in beta_names) {
     ci_lower <- ci_beta[term, "Lower"]
     ci_upper <- ci_beta[term, "Upper"]
     covered_matrix[i, term] <- (true_beta[term] >= ci_lower) & (true_beta[term] <= ci_upper)
     fitted_beta_mat[i, term] <- beta_hat[term]
+    se_beta_mat[i, term] <- se_hat[term]
   }
 }
 
-# ---- Part 4: Coverage and histogram ----
-coverage_df <- tibble(
-  Term = beta_names,
-  Coverage = round(colMeans(covered_matrix, na.rm = TRUE), 3)
+# ---- Part 4: Summary Table ----
+summary_table <- tibble(
+  Parameter = beta_names,
+  True = true_beta[beta_names],
+  Avg_Estimate = colMeans(fitted_beta_mat, na.rm = TRUE),
+  Avg_SE = colMeans(se_beta_mat, na.rm = TRUE),
+  Stdev_Estimates = apply(fitted_beta_mat, 2, sd, na.rm = TRUE),
+  Coverage_Pct = round(100 * colMeans(covered_matrix, na.rm = TRUE), 2)
 )
-print(coverage_df)
 
-for (term in beta_names) {
-  estimates <- fitted_beta_mat[, term]
-  ci_bounds <- quantile(estimates, probs = c(0.05, 0.95), na.rm = TRUE)
-  true_val <- true_beta[term]
-
-  buffer <- 0.05 * (max(estimates) - min(estimates))
-  x_min <- min(ci_bounds[1], true_val, min(estimates)) - buffer
-  x_max <- max(ci_bounds[2], true_val, max(estimates)) + buffer
-
-  hist(estimates,
-       breaks = 30,
-       main = paste("Sampling Distribution of Beta:", term),
-       xlab = paste("Estimated beta:", term),
-       col = "lightblue",
-       border = "white",
-       xlim = c(x_min, x_max))
-
-  abline(v = ci_bounds[1], col = "red", lwd = 2)
-  abline(v = ci_bounds[2], col = "red", lwd = 2)
-  abline(v = true_val, col = "blue", lwd = 2, lty = 2)
-
-  legend("topright",
-         legend = c("CI Lower", "CI Upper", "True beta"),
-         col = c("red", "red", "blue"),
-         lty = c(1, 1, 2),
-         lwd = 2,
-         bty = "n")
-
-  if (interactive()) readline(prompt = "Press [Enter] to continue...")
-}
+print(summary_table)

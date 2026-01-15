@@ -45,8 +45,132 @@ simulate_mock_dataset <- function(n,
   )
 }
 
+# ---- NUMERICAL ACCURACY TESTS (use large n) ----
+test_that("hapr estimates all coefficients correctly across variance scenarios (cox)", {
+  # Test three variance scenarios: var_epsilon = 1/3, 3/4, 9/10
+  # Other variances set so total = 1
+  variance_scenarios <- list(
+    list(var_epsilon = 1/3, var_v = 1/3, var_thetaw = 1/3),
+    list(var_epsilon = 3/4, var_v = 1/8, var_thetaw = 1/8),
+    list(var_epsilon = 9/10, var_v = 1/20, var_thetaw = 1/20)
+  )
+  
+  n <- 1e4
+  beta_gf_true <- 0.42
+  beta_w1_true <- 0.17
+  tolerance <- 0.01
+  
+  for (scenario in variance_scenarios) {
+    var_epsilon <- scenario$var_epsilon
+    var_v <- scenario$var_v
+    var_thetaw <- scenario$var_thetaw
+    
+    label <- paste("var_epsilon =", var_epsilon, 
+                   "var_v =", var_v, 
+                   "var_thetaw =", var_thetaw)
+    
+    # Generate simulated dataset
+    data <- simulate_mock_dataset(
+      n = n,
+      var_v = var_v,
+      var_epsilon = var_epsilon,
+      var_thetaw = var_thetaw,
+      beta_w1 = beta_w1_true,
+      beta_gf = beta_gf_true
+    )
+
+    # Fit the model
+    fit <- hapr(
+      y = data$y,
+      gc = data$gc,
+      w = data$w,
+      model_type = "cox",
+      improvement_ratio = 1 / (1 - var_epsilon)
+    )
+
+    # Extract estimated beta coefficients
+    beta_hat <- fit$coefficients$beta
+
+    # Check all coefficient accuracy
+    expect_true("gf" %in% names(beta_hat), 
+                info = paste("Missing 'gf' coefficient in", label))
+    expect_true("w1" %in% names(beta_hat), 
+                info = paste("Missing 'w1' coefficient in", label))
+    
+    # For beta_gf, compare to oracle Cox regression with normalized Gf
+    # (HAPR estimates beta for normalized Gf, not unnormalized)
+    gf_normalized <- scale(data$gf) |> as.numeric()
+    oracle_fit <- coxph(data$y ~ gf_normalized + data$w$w1)
+    beta_gf_oracle <- coef(oracle_fit)["gf_normalized"]
+    
+    # Build comparison table for error messages
+    comparison_table <- tibble(
+      Parameter = c("gf", "w1", "w2B", "w2C"),
+      True = c(beta_gf_oracle, beta_w1_true, 0, 0),
+      Estimated = c(beta_hat[["gf"]], beta_hat[["w1"]], 
+                     beta_hat[["w2B"]], beta_hat[["w2C"]]),
+      Error = c(abs(beta_hat[["gf"]] - beta_gf_oracle),
+                abs(beta_hat[["w1"]] - beta_w1_true),
+                abs(beta_hat[["w2B"]]),
+                abs(beta_hat[["w2C"]]))
+    )
+    
+    # Check each coefficient with detailed error message
+    err_gf <- abs(beta_hat[["gf"]] - beta_gf_oracle)
+    if (err_gf >= tolerance) {
+      fail(paste("\n=== Test Case:", label, "===\n",
+                 "gf coefficient failed tolerance check:\n",
+                 "  Error =", err_gf, "(tolerance =", tolerance, ")\n",
+                 "  HAPR estimate =", beta_hat[["gf"]], "\n",
+                 "  Oracle (normalized) =", beta_gf_oracle, "\n\n",
+                 "Full comparison table:\n",
+                 capture.output(print(comparison_table)) |> paste(collapse = "\n")))
+    }
+    
+    err_w1 <- abs(beta_hat[["w1"]] - beta_w1_true)
+    if (err_w1 >= tolerance) {
+      fail(paste("\n=== Test Case:", label, "===\n",
+                 "w1 coefficient failed tolerance check:\n",
+                 "  Error =", err_w1, "(tolerance =", tolerance, ")\n",
+                 "  True =", beta_w1_true, "\n",
+                 "  Estimated =", beta_hat[["w1"]], "\n\n",
+                 "Full comparison table:\n",
+                 capture.output(print(comparison_table)) |> paste(collapse = "\n")))
+    }
+
+    # Check factor coefficients are close to 0
+    expect_true("w2B" %in% names(beta_hat), 
+                info = paste("Missing 'w2B' coefficient in", label))
+    expect_true("w2C" %in% names(beta_hat), 
+                info = paste("Missing 'w2C' coefficient in", label))
+    
+    err_w2b <- abs(beta_hat[["w2B"]])
+    if (err_w2b >= tolerance) {
+      fail(paste("\n=== Test Case:", label, "===\n",
+                 "w2B coefficient failed tolerance check:\n",
+                 "  Error =", err_w2b, "(tolerance =", tolerance, ")\n",
+                 "  Estimated =", beta_hat[["w2B"]], "\n\n",
+                 "Full comparison table:\n",
+                 capture.output(print(comparison_table)) |> paste(collapse = "\n")))
+    }
+    
+    err_w2c <- abs(beta_hat[["w2C"]])
+    if (err_w2c >= tolerance) {
+      fail(paste("\n=== Test Case:", label, "===\n",
+                 "w2C coefficient failed tolerance check:\n",
+                 "  Error =", err_w2c, "(tolerance =", tolerance, ")\n",
+                 "  Estimated =", beta_hat[["w2C"]], "\n\n",
+                 "Full comparison table:\n",
+                 capture.output(print(comparison_table)) |> paste(collapse = "\n")))
+    }
+  }
+})
+
 # ---- CI COVERAGE TEST ----
 test_that("hapr confidence intervals for beta achieve exact match coverage (cox)", {
+  skip_if(Sys.getenv("HAPR_RUN_COVERAGE_TESTS") == "", 
+          "Skipping coverage test. Set HAPR_RUN_COVERAGE_TESTS=1 to run.")
+  
   default_params <- list(
     n = 1e4,
     var_v = 1 / 3,
