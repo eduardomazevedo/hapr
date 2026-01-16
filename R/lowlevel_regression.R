@@ -7,164 +7,145 @@
 #' @noRd
 NULL
 
-#' Fit a linear model using low-level functions
+
+#' Fit linear model on a matrix without saving bloat.
 #'
-#' @param y Response vector
-#' @param data Data frame of predictors
-#' @return List with coefficients, vcov_coefficients, terms, sigma_squared, 
-#'   explained_variance, df_residual, r2
-#' @noRd
-fit_lm_lowlevel <- function(y, data) {
-  # Create model frame and terms for prediction
-  mf <- model.frame(y ~ ., data = data)
-  mt <- terms(mf)
+#' @param y Numeric response vector
+#' @param X Numeric matrix of predictors
+#' @param add_intercept Logical. Whether to add an intercept column. No default.
+#' @return List of model statistics including coefficients, vcov_coefficients, sigma_squared, var_sigma_squared, r2
+fit_lm <- function(y, X, add_intercept) {
   
-  # Create design matrix (includes intercept)
-  X <- model.matrix(mt, mf)
-  
-  # Fit using .lm.fit (fastest, most stable low-level function)
-  fit <- .lm.fit(X, y)
-  
-  # Calculate degrees of freedom
+  # 1. Prepare Design Matrix
+  if (add_intercept) {
+    X_model <- cbind(`(Intercept)` = 1, X)
+  } else {
+    X_model <- X
+  }
+
+  # 2. Fit model using the fastest base function
+  fit <- .lm.fit(X_model, y)
+
+  # 3. Dimensions
   n <- length(y)
-  p <- ncol(X)
+  p <- ncol(X_model)
   df_residual <- n - p
   
-  # Calculate residuals
+  # 4. Calculate Sigma Squared (Residual Variance)
   residuals <- fit$residuals
-  fitted_values <- y - residuals
+  rss <- c(crossprod(residuals))
+  sigma_squared <- rss / df_residual
   
-  # Calculate sigma squared (residual variance)
-  sigma_squared <- sum(residuals^2) / df_residual
+  # 5. Calculate Variance of the Sigma Squared Estimator
+  # Var(s^2) = 2 * sigma^4 / df
+  var_sigma_squared <- 2 * (sigma_squared^2) / df_residual
   
-  # Calculate explained variance (variance of fitted values)
-  explained_variance <- var(fitted_values)
+  # 6. Coefficient VCOV: sigma^2 * (X'X)^-1
+  # Handle potential LAPACK pivoting
+  piv <- fit$pivot[1:p]
   
-  # Calculate R-squared
-  var_y <- var(y)
-  r2 <- if (var_y > 0) explained_variance / var_y else 0
+  XtX_inv_pivoted <- chol2inv(fit$qr[1:p, 1:p, drop = FALSE])
   
-  # Calculate variance-covariance matrix of coefficients
-  # vcov = sigma^2 * (X'X)^{-1}
-  # Use QR decomposition for numerical stability
-  qr_X <- qr(X)
-  if (qr_X$rank < p) {
-    # Rank-deficient case
-    coef_names <- colnames(X)
-    vcov_coefficients <- matrix(NA, p, p, dimnames = list(coef_names, coef_names))
-    R_inv <- tryCatch(chol2inv(qr.R(qr_X)), error = function(e) solve(qr.R(qr_X)))
-    vcov_coefficients[qr_X$pivot[1:qr_X$rank], qr_X$pivot[1:qr_X$rank]] <- 
-      sigma_squared * R_inv
-  } else {
-    # Full rank case
-    R_inv <- tryCatch(chol2inv(qr.R(qr_X)), error = function(e) solve(qr.R(qr_X)))
-    vcov_coefficients <- sigma_squared * R_inv
-    colnames(vcov_coefficients) <- rownames(vcov_coefficients) <- colnames(X)
-  }
+  XtX_inv <- matrix(0, p, p)
+  XtX_inv[piv, piv] <- XtX_inv_pivoted
   
-  # Get coefficients (may have NA for rank-deficient cases)
+  vcov_coefficients <- XtX_inv * sigma_squared
+  
+  # 7. Final Formatting
+  coef_names <- colnames(X_model)
+  if (is.null(coef_names)) coef_names <- paste0("x", 1:p)
+  
+  dimnames(vcov_coefficients) <- list(coef_names, coef_names)
   coefficients <- fit$coefficients
-  names(coefficients) <- colnames(X)
+  names(coefficients) <- coef_names
   
+  # R-squared
+  tss <- c(crossprod(y - mean(y)))
+  r2 <- 1 - (rss / tss)
+
   list(
     coefficients = coefficients,
     vcov_coefficients = vcov_coefficients,
-    terms = mt,
-    xlevels = .getXlevels(mt, mf),
     sigma_squared = sigma_squared,
-    explained_variance = explained_variance,
-    df_residual = df_residual,
+    var_sigma_squared = var_sigma_squared,
     r2 = r2
   )
 }
 
-#' Fit a probit model (still needs glm for IRLS, but extracts only essentials)
+#' Fit probit model on a matrix without saving bloat.
 #'
-#' @param y Response vector (binary)
-#' @param data Data frame of predictors
-#' @return List with coefficients, vcov_coefficients, terms, r2
-#' @noRd
-fit_probit_lowlevel <- function(y, data) {
-  # Create model frame and terms for prediction
-  mf <- model.frame(y ~ ., data = data)
-  mt <- terms(mf)
+#' @param y Binary response vector (0/1)
+#' @param X Numeric matrix of predictors
+#' @param add_intercept Logical. Whether to add an intercept column. No default.
+#' @return List of model statistics including coefficients, vcov_coefficients, r2
+fit_probit <- function(y, X, add_intercept) {
   
-  # Fit using glm (no low-level alternative for IRLS)
-  fit <- glm(y ~ ., data = data, family = binomial(link = "probit"))
-  
-  # Extract coefficients
-  coefficients <- coef(fit)
-  
-  # Extract variance-covariance matrix
-  vcov_coefficients <- vcov(fit)
-  
-  # Calculate liability-scale R²
-  # Need to compute this from the design matrix and coefficients
-  X <- model.matrix(mt, mf)[, -1, drop = FALSE] # Remove intercept
-  beta_hat <- coefficients[-1] # Remove intercept
-  
-  if (length(beta_hat) == 0) {
-    r2 <- 0
+  # 1. Prepare Design Matrix
+  if (add_intercept) {
+    X_model <- cbind(`(Intercept)` = 1, X)
   } else {
-    var_linear_predictor <- var(X %*% beta_hat)
-    r2 <- var_linear_predictor / (var_linear_predictor + 1)
+    X_model <- X
   }
   
-  list(
-    coefficients = coefficients,
-    vcov_coefficients = vcov_coefficients,
-    terms = mt,
-    xlevels = .getXlevels(mt, mf),
-    r2 = r2
-  )
-}
+  # 2. Fit model using glm.fit (faster than glm, bypasses formula parsing)
+  # glm.fit takes x and y directly.
+  fit <- glm.fit(x = X_model, y = y, family = binomial(link = "probit"))
+  
+  # Check for convergence
+  if (!fit$converged) {
+    warning("glm.fit: algorithm did not converge")
+  }
 
-#' Fit a Cox model (still needs coxph for basehaz, but extracts only essentials)
-#'
-#' @param y Surv object (response)
-#' @param data Data frame of predictors
-#' @return List with coefficients, vcov_coefficients, terms, baseline_hazard
-#' @noRd
-fit_cox_lowlevel <- function(y, data) {
-  # Fit using coxph (required for basehaz)
-  fit <- survival::coxph(y ~ ., data = data)
+  # 3. Extract Coefficients and Covariance
+  # In GLM, vcov = (X'WX)^-1 * phi. For binomial, phi=1.
+  # We calculate it directly from the QR decomposition of the weighted design matrix
+  # which glm.fit stores in fit$qr.
+  p <- ncol(X_model)
+  piv <- fit$qr$pivot[1:p]
   
-  # Extract coefficients
-  coefficients <- coef(fit)
+  XtWX_inv_pivoted <- chol2inv(fit$qr$qr[1:p, 1:p, drop = FALSE])
   
-  # Extract variance-covariance matrix
-  vcov_coefficients <- vcov(fit)
+  XtWX_inv <- matrix(0, p, p)
+  XtWX_inv[piv, piv] <- XtWX_inv_pivoted
   
-  # Extract baseline hazard (required for Cox models)
-  baseline_hazard <- survival::basehaz(fit, centered = FALSE)
+  vcov_coefficients <- XtWX_inv # Dispersion parameter is 1 for binomial
   
-  # Extract terms object for prediction
-  # coxph stores terms in the fit object
-  mt <- fit$terms
-  if (is.null(mt)) {
-    # Fallback: create terms from the formula
-    formula_obj <- formula(fit)
-    mf <- model.frame(formula_obj, data = cbind(data.frame(.y = y), data))
-    mt <- delete.response(terms(mf))
+  # 4. Final Formatting
+  coef_names <- colnames(X_model)
+  if (is.null(coef_names)) coef_names <- paste0("x", 1:p)
+  
+  dimnames(vcov_coefficients) <- list(coef_names, coef_names)
+  coefficients <- fit$coefficients
+  names(coefficients) <- coef_names
+  
+  # 5. Calculate Liability-Scale R-squared
+  # Formula: Var(Xb) / (Var(Xb) + 1)
+  # We isolate the linear predictor associated with predictors (excluding intercept)
+  if (add_intercept) {
+    # If intercept is present, remove it to calculate variance of explained part
+    beta_predictors <- coefficients[-1]
+    X_predictors <- X # Original X input is the predictor part
+    
+    if (length(beta_predictors) == 0) {
+      r2 <- 0
+    } else {
+      # Calculate variance of the linear predictor (X * beta)
+      # We can use var() directly on the vector
+      linear_predictor <- c(X_predictors %*% beta_predictors)
+      var_lp <- var(linear_predictor)
+      r2 <- var_lp / (var_lp + 1)
+    }
+  } else {
+    # If no intercept, all columns contribute to variance
+    # Note: R2 definition without intercept is tricky, but this standardizes latent variance
+    linear_predictor <- c(X_model %*% coefficients)
+    var_lp <- var(linear_predictor)
+    r2 <- var_lp / (var_lp + 1)
   }
-  
-  # Get xlevels from the fit object if available
-  xlevels <- fit$xlevels
-  if (is.null(xlevels)) {
-    # Try to extract from model frame
-    tryCatch({
-      mf <- model.frame(fit)
-      xlevels <- .getXlevels(mt, mf)
-    }, error = function(e) {
-      xlevels <- NULL
-    })
-  }
-  
+
   list(
     coefficients = coefficients,
     vcov_coefficients = vcov_coefficients,
-    terms = mt,
-    xlevels = xlevels,
-    baseline_hazard = baseline_hazard
+    r2 = r2
   )
 }

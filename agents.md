@@ -48,6 +48,7 @@ Model-specific conversion formulas are in `calculate_parameters()` and `calculat
 
 ## Development Notes
 
+- **Working directory**: All scripts and commands are run from the project root directory
 - **Normalization**: `G_c` must be normalized (unit variance) - checked in preprocessing
 - **Coefficient naming**: Uses "gc" for current PRS, "gf" for future PRS in coefficient vectors
 - **Delta method**: Standard errors computed via analytical Jacobian (see `calculate_analytical_jacobian`)
