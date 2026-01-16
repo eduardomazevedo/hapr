@@ -93,6 +93,13 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   # Normalize gc (scale to mean 0, variance 1)
   gc <- as.numeric(scale(gc))
   
+  # Helper function to create design matrix with named intercept
+  add_intercept <- function(X) {
+    X_with_int <- cbind(1, X)
+    colnames(X_with_int)[1] <- "(Intercept)"
+    X_with_int
+  }
+  
   # Define regression function by model type
   if (model_type == "lm") {
     regression_function <- function(X_mat) fit_lm(y, X_mat)
@@ -103,11 +110,18 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   }
   
   # Run regressions using low-level functions
+  # Create design matrices with named intercept column
+  gc_on_w_X <- add_intercept(w)
+  y_on_w_X <- add_intercept(w)
+  y_on_gc_X <- add_intercept(gc)
+  y_on_gc_w_X <- cbind(gc, add_intercept(w))
+  colnames(y_on_gc_w_X)[1] <- "gc"
+  
   regressions <- list(
-    gc_on_w = fit_lm(gc, cbind(1, w)),
-    y_on_w = regression_function(cbind(1, w)),
-    y_on_gc = regression_function(cbind(1, gc)),
-    y_on_gc_w = regression_function(cbind(gc, 1, w))
+    gc_on_w = fit_lm(gc, gc_on_w_X),
+    y_on_w = regression_function(y_on_w_X),
+    y_on_gc = regression_function(y_on_gc_X),
+    y_on_gc_w = regression_function(y_on_gc_w_X)
   )
   
   # Extract coefficients

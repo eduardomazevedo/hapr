@@ -12,9 +12,9 @@ source("dev/mock_dataset.R")
 set.seed(123)
 
 # Parameters for mock dataset
-n <- 100
-var_v <- 0.3
-var_epsilon <- 0.5
+n <- 10000
+var_v <- 0.05
+var_epsilon <- 0.9
 beta_g <- 0.42  # Effect of future PRS (gf) on outcome
 beta_w <- c(0.1, 0.17, 0.27, -0.27)  # Intercept + 3 covariate effects
 theta <- c(0.0, 0.1, -0.2, 0.3)  # Intercept + 3 covariate effects for gc ~ w
@@ -52,35 +52,9 @@ first_stage_fit <- hapr_first_stage(
   model_type = "lm"
 )
 
-# Print results
-cat("\n")
-cat(paste(rep("=", 72), collapse = ""), "\n")
-cat("HAPR First Stage Results\n")
-cat(paste(rep("=", 72), collapse = ""), "\n\n")
-
-cat("PARAMETERS:\n")
-cat("Theta (gc ~ w):\n")
-print(first_stage_fit$parameters$theta)
-cat("\n")
-
-cat("Var(v + epsilon):\n")
-print(first_stage_fit$parameters$var_v_plus_var_epsilon)
-cat("\n")
-
-cat("Gamma (y ~ gc + w):\n")
-print(first_stage_fit$parameters$gamma)
-cat("\n")
-
-cat("STATISTICS:\n")
-cat("Max improvement ratio:", first_stage_fit$stats$max_improvement_ratio, "\n")
-cat("Var(w*theta):", first_stage_fit$stats$var_wtheta, "\n")
-cat("\n")
-
-cat("REGRESSION R-SQUARED:\n")
-cat("gc ~ w R²:", first_stage_fit$regressions$gc_on_w$r2, "\n")
-cat("y ~ w R²:", first_stage_fit$regressions$y_on_w$r2, "\n")
-cat("y ~ gc R²:", first_stage_fit$regressions$y_on_gc$r2, "\n")
-cat("y ~ gc + w R²:", first_stage_fit$regressions$y_on_gc_w$r2, "\n")
-cat("\n")
-
-cat(paste(rep("=", 72), collapse = ""), "\n")
+# Second stage
+cat("Running hapr_second_stage...\n")
+second_stage_fit <- hapr_second_stage(
+  first_stage = first_stage_fit,
+  improvement_ratio = improvement_ratio
+)

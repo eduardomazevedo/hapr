@@ -4,42 +4,24 @@
 #' Fits the full HARP model given the first stage fit and an improvement ratio.
 #' Uses manual Delta Method for standard errors.
 #' @param first_stage A hapr_first_stage_fit object
-#' @param improvement_ratio The ratio to extrapolate by
-#' @param r2_current The R-squared of the current fit
-#' @param r2_future The R-squared of the future fit
+#' @param improvement_ratio The ratio to extrapolate by (required)
 #' @return A hapr_lm_fit object containing the results of the second stage
 #' @export
 hapr_second_stage <- function(
     first_stage,
-    improvement_ratio = NULL,
-    r2_current = NULL,
-    r2_future = NULL) {
+    improvement_ratio) {
 
   if (!inherits(first_stage, "hapr_first_stage_fit")) {
     stop("first_stage must be a hapr_first_stage_fit object.")
   }
 
-  if (is.null(improvement_ratio) && is.null(r2_future)) {
-    stop("Either improvement_ratio or r2_future must be specified.")
-  }
-  if (!is.null(improvement_ratio) && !is.null(r2_future)) {
-    stop("Only one of improvement_ratio or r2_future should be provided.")
+  if (missing(improvement_ratio) || is.null(improvement_ratio)) {
+    stop("improvement_ratio must be specified.")
   }
 
-  if (is.null(r2_current)) {
-    r2_current_source <- "first_stage"
-    r2_current <- first_stage$regressions$y_on_gc$r2 |> as.numeric()
-  } else {
-    r2_current_source <- "user_provided"
-  }
-
-  if (is.null(r2_future)) {
-    heritability_source <- "improvement_ratio"
-    r2_future <- improvement_ratio * r2_current
-  } else {
-    heritability_source <- "r2_future"
-    improvement_ratio <- r2_future / r2_current
-  }
+  # Calculate R-squared values from first stage
+  r2_current <- first_stage$regressions$y_on_gc$r2 |> as.numeric()
+  r2_future <- improvement_ratio * r2_current
 
   if (improvement_ratio >= first_stage$stats$max_improvement_ratio) {
     stop(sprintf("Improvement ratio must be less than %s.",
@@ -108,8 +90,11 @@ hapr_second_stage <- function(
   y_on_gf_w <- first_stage$regressions$y_on_gc_w
 
   # Update model coefficients
-  y_on_gf_w$parameters <- parameters
+  y_on_gf_w$parameters <- beta
   y_on_gf_w$vcov_parameters <- vcov_beta
+  
+  # Initialize parameters list for output
+  parameters <- list(beta = beta)
   
   # Add model-specific additional parameters to the same list
   if (first_stage$model_type == "lm") {
@@ -136,9 +121,7 @@ hapr_second_stage <- function(
       posterior = posterior,
       improvement_ratio = improvement_ratio,
       r2_current = r2_current,
-      r2_future = r2_future,
-      heritability_source = heritability_source,
-      r2_current_source = r2_current_source
+      r2_future = r2_future
     ))
   )
   class(result) <- "hapr_fit"
