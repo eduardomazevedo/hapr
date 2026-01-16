@@ -12,23 +12,14 @@ NULL
 #'
 #' @param y Numeric response vector
 #' @param X Numeric matrix of predictors
-#' @param add_intercept Logical. Whether to add an intercept column. No default.
 #' @return List of model statistics including coefficients, vcov_coefficients, sigma_squared, var_sigma_squared, r2
-fit_lm <- function(y, X, add_intercept) {
-  
-  # 1. Prepare Design Matrix
-  if (add_intercept) {
-    X_model <- cbind(`(Intercept)` = 1, X)
-  } else {
-    X_model <- X
-  }
-
+fit_lm <- function(y, X) {
   # 2. Fit model using the fastest base function
-  fit <- .lm.fit(X_model, y)
+  fit <- .lm.fit(X, y)
 
   # 3. Dimensions
   n <- length(y)
-  p <- ncol(X_model)
+  p <- ncol(X)
   df_residual <- n - p
   
   # 4. Calculate Sigma Squared (Residual Variance)
@@ -52,7 +43,7 @@ fit_lm <- function(y, X, add_intercept) {
   vcov_coefficients <- XtX_inv * sigma_squared
   
   # 7. Final Formatting
-  coef_names <- colnames(X_model)
+  coef_names <- colnames(X)
   if (is.null(coef_names)) coef_names <- paste0("x", 1:p)
   
   dimnames(vcov_coefficients) <- list(coef_names, coef_names)
@@ -75,21 +66,13 @@ fit_lm <- function(y, X, add_intercept) {
 #' Fit probit model on a matrix without saving bloat.
 #'
 #' @param y Binary response vector (0/1)
-#' @param X Numeric matrix of predictors
-#' @param add_intercept Logical. Whether to add an intercept column. No default.
+#' @param X Numeric matrix of predictors (should include intercept column if needed)
 #' @return List of model statistics including coefficients, vcov_coefficients, r2
-fit_probit <- function(y, X, add_intercept) {
+fit_probit <- function(y, X) {
   
-  # 1. Prepare Design Matrix
-  if (add_intercept) {
-    X_model <- cbind(`(Intercept)` = 1, X)
-  } else {
-    X_model <- X
-  }
-  
-  # 2. Fit model using glm.fit (faster than glm, bypasses formula parsing)
+  # 1. Fit model using glm.fit (faster than glm, bypasses formula parsing)
   # glm.fit takes x and y directly.
-  fit <- glm.fit(x = X_model, y = y, family = binomial(link = "probit"))
+  fit <- glm.fit(x = X, y = y, family = binomial(link = "probit"))
   
   # Check for convergence
   if (!fit$converged) {
@@ -100,7 +83,7 @@ fit_probit <- function(y, X, add_intercept) {
   # In GLM, vcov = (X'WX)^-1 * phi. For binomial, phi=1.
   # We calculate it directly from the QR decomposition of the weighted design matrix
   # which glm.fit stores in fit$qr.
-  p <- ncol(X_model)
+  p <- ncol(X)
   piv <- fit$qr$pivot[1:p]
   
   XtWX_inv_pivoted <- chol2inv(fit$qr$qr[1:p, 1:p, drop = FALSE])
@@ -111,7 +94,7 @@ fit_probit <- function(y, X, add_intercept) {
   vcov_coefficients <- XtWX_inv # Dispersion parameter is 1 for binomial
   
   # 4. Final Formatting
-  coef_names <- colnames(X_model)
+  coef_names <- colnames(X)
   if (is.null(coef_names)) coef_names <- paste0("x", 1:p)
   
   dimnames(vcov_coefficients) <- list(coef_names, coef_names)
@@ -121,10 +104,14 @@ fit_probit <- function(y, X, add_intercept) {
   # 5. Calculate Liability-Scale R-squared
   # Formula: Var(Xb) / (Var(Xb) + 1)
   # We isolate the linear predictor associated with predictors (excluding intercept)
-  if (add_intercept) {
+  # Check if first column is intercept (by name or by being constant)
+  has_intercept <- "(Intercept)" %in% coef_names || 
+                   (p > 0 && length(unique(X[, 1])) == 1)
+  
+  if (has_intercept && p > 1) {
     # If intercept is present, remove it to calculate variance of explained part
     beta_predictors <- coefficients[-1]
-    X_predictors <- X # Original X input is the predictor part
+    X_predictors <- X[, -1, drop = FALSE]
     
     if (length(beta_predictors) == 0) {
       r2 <- 0
@@ -138,7 +125,7 @@ fit_probit <- function(y, X, add_intercept) {
   } else {
     # If no intercept, all columns contribute to variance
     # Note: R2 definition without intercept is tricky, but this standardizes latent variance
-    linear_predictor <- c(X_model %*% coefficients)
+    linear_predictor <- c(X %*% coefficients)
     var_lp <- var(linear_predictor)
     r2 <- var_lp / (var_lp + 1)
   }

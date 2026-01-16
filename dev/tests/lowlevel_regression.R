@@ -28,8 +28,9 @@ colnames(X) <- c("x1", "x2", "x3")
 beta_true <- c(2, -1, 0.5, 1.5)  # intercept + 3 predictors
 y <- beta_true[1] + X %*% beta_true[-1] + rnorm(n, sd = 0.5)
 
-# Fit with low-level function
-fit_low <- fit_lm(y = y, X = X, add_intercept = TRUE)
+# Fit with low-level function (include intercept in X)
+X_with_int <- cbind(`(Intercept)` = 1, X)
+fit_low <- fit_lm(y = y, X = X_with_int)
 
 # Fit with standard lm
 df_lm <- data.frame(y = y, X)
@@ -110,8 +111,9 @@ linear_pred <- beta_probit_true[1] + X_probit %*% beta_probit_true[-1]
 prob <- pnorm(linear_pred)
 y_probit <- rbinom(n_probit, size = 1, prob = prob)
 
-# Fit with low-level function
-fit_probit_low <- fit_probit(y = y_probit, X = X_probit, add_intercept = TRUE)
+# Fit with low-level function (include intercept in X)
+X_probit_with_int <- cbind(`(Intercept)` = 1, X_probit)
+fit_probit_low <- fit_probit(y = y_probit, X = X_probit_with_int)
 
 # Fit with standard glm
 df_probit <- data.frame(y = y_probit, X_probit)
@@ -171,7 +173,7 @@ cat("LINEAR REGRESSION TEST (NO INTERCEPT)\n")
 cat(paste(rep("-", 72), collapse = ""), "\n\n")
 
 # Fit without intercept
-fit_low_no_int <- fit_lm(y = y, X = X, add_intercept = FALSE)
+fit_low_no_int <- fit_lm(y = y, X = X)
 fit_std_no_int <- lm(y ~ 0 + ., data = df_lm)
 
 cat("COEFFICIENTS COMPARISON:\n")

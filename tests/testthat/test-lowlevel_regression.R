@@ -9,8 +9,9 @@ test_that("fit_lm matches lm output for linear regression with intercept", {
   beta_true <- c(2, -1, 0.5, 1.5)  # intercept + 3 predictors
   y <- beta_true[1] + X %*% beta_true[-1] + rnorm(n, sd = 0.5)
   
-  # Fit with low-level function
-  fit_low <- hapr:::fit_lm(y = y, X = X, add_intercept = TRUE)
+  # Fit with low-level function (include intercept in X)
+  X_with_int <- cbind(`(Intercept)` = 1, X)
+  fit_low <- hapr:::fit_lm(y = y, X = X_with_int)
   
   # Fit with standard lm
   df_lm <- data.frame(y = y, X)
@@ -57,7 +58,7 @@ test_that("fit_lm matches lm output for linear regression without intercept", {
   y <- beta_true[1] + X %*% beta_true[-1] + rnorm(n, sd = 0.5)
   
   # Fit without intercept
-  fit_low <- hapr:::fit_lm(y = y, X = X, add_intercept = FALSE)
+  fit_low <- hapr:::fit_lm(y = y, X = X)
   df_lm <- data.frame(y = y, X)
   fit_std <- lm(y ~ 0 + ., data = df_lm)
   
@@ -96,8 +97,9 @@ test_that("fit_probit matches glm output for probit regression", {
   prob <- pnorm(linear_pred)
   y <- rbinom(n, size = 1, prob = prob)
   
-  # Fit with low-level function
-  fit_low <- hapr:::fit_probit(y = y, X = X, add_intercept = TRUE)
+  # Fit with low-level function (include intercept in X)
+  X_with_int <- cbind(`(Intercept)` = 1, X)
+  fit_low <- hapr:::fit_probit(y = y, X = X_with_int)
   
   # Fit with standard glm
   df_probit <- data.frame(y = y, X)
@@ -135,7 +137,7 @@ test_that("fit_probit matches glm output for probit regression without intercept
   y <- rbinom(n, size = 1, prob = prob)
   
   # Fit without intercept
-  fit_low <- hapr:::fit_probit(y = y, X = X, add_intercept = FALSE)
+  fit_low <- hapr:::fit_probit(y = y, X = X)
   df_probit <- data.frame(y = y, X)
   fit_std <- glm(y ~ 0 + ., data = df_probit, family = binomial(link = "probit"))
   
@@ -162,7 +164,8 @@ test_that("fit_lm returns correct structure and types", {
   X <- matrix(rnorm(n * p), nrow = n, ncol = p)
   y <- rnorm(n)
   
-  result <- hapr:::fit_lm(y = y, X = X, add_intercept = TRUE)
+  X_with_int <- cbind(`(Intercept)` = 1, X)
+  result <- hapr:::fit_lm(y = y, X = X_with_int)
   
   # Check structure
   expect_named(result, c("coefficients", "vcov_coefficients", "sigma_squared", 
@@ -193,7 +196,8 @@ test_that("fit_probit returns correct structure and types", {
   X <- matrix(rnorm(n * p), nrow = n, ncol = p)
   y <- rbinom(n, size = 1, prob = 0.5)
   
-  result <- hapr:::fit_probit(y = y, X = X, add_intercept = TRUE)
+  X_with_int <- cbind(`(Intercept)` = 1, X)
+  result <- hapr:::fit_probit(y = y, X = X_with_int)
   
   # Check structure
   expect_named(result, c("coefficients", "vcov_coefficients", "r2"))
@@ -219,7 +223,8 @@ test_that("fit_lm handles edge case with single predictor", {
   colnames(X) <- "x1"
   y <- 2 + 1.5 * X[, 1] + rnorm(n, sd = 0.5)
   
-  fit_low <- hapr:::fit_lm(y = y, X = X, add_intercept = TRUE)
+  X_with_int <- cbind(`(Intercept)` = 1, X)
+  fit_low <- hapr:::fit_lm(y = y, X = X_with_int)
   df_lm <- data.frame(y = y, x1 = X[, 1])
   fit_std <- lm(y ~ ., data = df_lm)
   
@@ -237,7 +242,8 @@ test_that("fit_probit handles edge case with single predictor", {
   prob <- pnorm(linear_pred)
   y <- rbinom(n, size = 1, prob = prob)
   
-  fit_low <- hapr:::fit_probit(y = y, X = X, add_intercept = TRUE)
+  X_with_int <- cbind(`(Intercept)` = 1, X)
+  fit_low <- hapr:::fit_probit(y = y, X = X_with_int)
   df_probit <- data.frame(y = y, x1 = X[, 1])
   fit_std <- glm(y ~ ., data = df_probit, family = binomial(link = "probit"))
   

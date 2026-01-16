@@ -6,6 +6,12 @@
 #' @details
 #' This returns a first stage fit, which does not need to assume an improvement ratio. Run
 #' hapr_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
+#' 
+#' **Coefficient Ordering:**
+#' The coefficients are returned in a specific order that stage 2 relies on:
+#' - `theta`: (Intercept), w1, w2, ... (from gc ~ w regression)
+#' - `gamma`: gc, (Intercept), w1, w2, ... (from y ~ gc + w regression)
+#' This ordering is critical for the stage 2 calculations.
 #'
 #' @param y Outcome variable. For "lm": numeric vector. For "probit": binary numeric vector (0/1).
 #' @param gc Polygenic risk score (numeric vector, will be normalized)
@@ -89,19 +95,19 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   
   # Define regression function by model type
   if (model_type == "lm") {
-    regression_function <- function(X_mat) fit_lm(y, X_mat, add_intercept = TRUE)
+    regression_function <- function(X_mat) fit_lm(y, X_mat)
   } else if (model_type == "probit") {
-    regression_function <- function(X_mat) fit_probit(y, X_mat, add_intercept = TRUE)
+    regression_function <- function(X_mat) fit_probit(y, X_mat)
   } else {
     stop("Unsupported model_type: ", model_type)
   }
   
   # Run regressions using low-level functions
   regressions <- list(
-    gc_on_w = fit_lm(gc, w, add_intercept = TRUE),
-    y_on_w = regression_function(w),
-    y_on_gc = regression_function(gc),
-    y_on_gc_w = regression_function(cbind(gc, w))
+    gc_on_w = fit_lm(gc, cbind(1, w)),
+    y_on_w = regression_function(cbind(1, w)),
+    y_on_gc = regression_function(cbind(1, gc)),
+    y_on_gc_w = regression_function(cbind(gc, 1, w))
   )
   
   # Extract coefficients

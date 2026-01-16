@@ -15,11 +15,11 @@ print.hapr_fit <- function(x, ...) {
   cat("Model type:", x$model_type, "\n\n")
 
   cat("Beta coefficients (future PRS effects):\n")
-  beta_to_show <- x$coefficients$beta[1:min(5, length(x$coefficients$beta))]
+  beta_to_show <- x$parameters$beta[1:min(5, length(x$parameters$beta))]
   coef_table <- data.frame(Estimate = beta_to_show)
   print(coef_table, digits = 4)
-  if (length(x$coefficients$beta) > 5) {
-    cat("  Showing first 5 of", length(x$coefficients$beta), "coefficients\n")
+  if (length(x$parameters$beta) > 5) {
+    cat("  Showing first 5 of", length(x$parameters$beta), "coefficients\n")
   }
   cat("\n")
 
@@ -37,13 +37,6 @@ print.hapr_fit <- function(x, ...) {
 
   cat("Max improvement ratio:", sprintf("%.4f", x$stats$max_improvement_ratio), "\n")
 
-  if (x$model_type == "cox") {
-    if (!is.null(x$additional_parameters$base_hazard_conversion_ratio)) {
-      cat("Base hazard conversion ratio:",
-          sprintf("%.4f", x$additional_parameters$base_hazard_conversion_ratio), "\n")
-    }
-  }
-
   invisible(x)
 }
 
@@ -56,23 +49,15 @@ print.hapr_fit <- function(x, ...) {
 #'
 #' @return A summary.hapr_fit object containing the summary information
 #'
-#' @details
-#' For Cox models, the reported standard errors and confidence intervals are based on delta method approximations.
-#' These may underestimate true uncertainty, especially for the `gf` term, due to:
-#' \itemize{
-#'   \item The use of a partial likelihood (not full likelihood)
-#'   \item Nonlinear transformation of parameters not fully captured by the Jacobian
-#' }
-#' For production inference, consider resampling methods such as bootstrap.
 #' @export
 summary.hapr_fit <- function(object, ...) {
   result <- list(
     model_type = object$model_type,
-    beta = object$coefficients$beta,
+    beta = object$parameters$beta,
     sd_beta = object$standard_errors,
     ci_beta = object$ci_beta,
-    gamma = object$coefficients$gamma,
-    theta = object$coefficients$theta,
+    gamma = object$parameters$gamma,
+    theta = object$parameters$theta,
     var_v = object$stats$var_v,
     var_epsilon = object$stats$var_epsilon,
     improvement_ratio = object$stats$improvement_ratio,
@@ -83,9 +68,10 @@ summary.hapr_fit <- function(object, ...) {
     r2_current_source = object$stats$r2_current_source,
     posterior = object$stats$posterior
   )
-
-  if (object$model_type == "cox") {
-    result$base_hazard_conversion_ratio <- object$additional_parameters$base_hazard_conversion_ratio
+  
+  # Add model-specific parameters if present
+  if (!is.null(object$parameters$var_eta)) {
+    result$var_eta <- object$parameters$var_eta
   }
 
   class(result) <- "summary.hapr_fit"
@@ -146,13 +132,9 @@ print.summary.hapr_fit <- function(x, ...) {
   cat("b:", sprintf("%.4f", x$posterior$b), "\n")
   cat("c:", sprintf("%.4f", x$posterior$c), "\n\n")
 
-  if (x$model_type == "cox") {
-    cat("Cox Model-Specific Statistics:\n")
-    cat("----------------------------\n")
-    if (!is.null(x$base_hazard_conversion_ratio)) {
-      cat("Base Hazard Conversion Ratio:", sprintf("%.4f", x$base_hazard_conversion_ratio), "\n")
-      cat("Baseline hazard: [matrix omitted for brevity]\n")
-    }
+  if (!is.null(x$var_eta)) {
+    cat("Var(eta):", sprintf("%.4f", x$var_eta), "\n\n")
   }
+  
   invisible(x)
 }

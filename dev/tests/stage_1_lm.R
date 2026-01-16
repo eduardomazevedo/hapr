@@ -13,8 +13,8 @@ set.seed(123)
 
 # Parameters for mock dataset
 n <- 100
-sigma_v <- 0.3
-sigma_epsilon <- 0.5
+var_v <- 0.3
+var_epsilon <- 0.5
 beta_g <- 0.42  # Effect of future PRS (gf) on outcome
 beta_w <- c(0.1, 0.17, 0.27, -0.27)  # Intercept + 3 covariate effects
 theta <- c(0.0, 0.1, -0.2, 0.3)  # Intercept + 3 covariate effects for gc ~ w
@@ -24,8 +24,8 @@ var_y <- 1.0  # Error variance for outcome
 cat("Creating mock dataset...\n")
 data <- mock_dataset_lm(
   n = n,
-  sigma_v = sigma_v,
-  sigma_epsilon = sigma_epsilon,
+  var_v = var_v,
+  var_epsilon = var_epsilon,
   beta_g = beta_g,
   beta_w = beta_w,
   theta = theta,
