@@ -65,7 +65,7 @@ fit_lm <- function(y, X) {
 
 #' Fit probit model on a matrix without saving bloat.
 #'
-#' @param y Binary response vector (0/1)
+#' @param y Binary response vector (numeric 0/1 or logical, will be converted to numeric)
 #' @param X Numeric matrix of predictors (should include intercept column if needed)
 #' @return List of model statistics including coefficients, vcov_coefficients, r2
 fit_probit <- function(y, X) {

@@ -13,7 +13,7 @@
 #' - `gamma`: gc, (Intercept), w1, w2, ... (from y ~ gc + w regression)
 #' This ordering is critical for the stage 2 calculations.
 #'
-#' @param y Outcome variable. For "lm": numeric vector. For "probit": binary numeric vector (0/1).
+#' @param y Outcome variable. For "lm": numeric vector. For "probit": logical vector.
 #' @param gc Polygenic risk score (numeric vector, will be normalized)
 #' @param w Control variables (numeric matrix, must not include constant or linearly dependent columns)
 #' @param model_type "lm" or "probit"
@@ -33,9 +33,10 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     }
     y <- as.numeric(y)
   } else if (model_type == "probit") {
-    if (!is.numeric(y) || !all(y %in% c(0, 1))) {
-      stop("For 'probit' model_type, y must be a binary numeric vector (0/1)")
+    if (!is.logical(y)) {
+      stop("For 'probit' model_type, y must be a logical vector")
     }
+    # Convert logical to numeric for glm.fit (0/1)
     y <- as.numeric(y)
   }
   

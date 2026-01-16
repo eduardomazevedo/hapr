@@ -33,8 +33,7 @@ data <- mock_dataset_lm(
 )
 
 # Extract components
-# Note: data$w includes intercept column, but hapr_first_stage expects w without intercept
-w <- data$w[, -1, drop = FALSE]  # Remove intercept column
+w <- data$w
 gc <- data$gc
 y <- data$y
 

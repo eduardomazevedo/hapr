@@ -160,24 +160,24 @@ test_that("hapr_first_stage rejects missing values", {
   )
 })
 
-test_that("hapr_first_stage validates probit y is binary", {
+test_that("hapr_first_stage validates probit y is logical", {
   set.seed(123)
   
   n <- 50
   w <- matrix(rnorm(n * 2), nrow = n, ncol = 2)
   gc <- rnorm(n)
   
-  # Test with non-binary y for probit
+  # Test with non-logical y for probit
   y_continuous <- rnorm(n)
   expect_error(
     hapr_first_stage(y = y_continuous, gc = gc, w = w, model_type = "probit"),
-    "For 'probit' model_type, y must be a binary numeric vector"
+    "For 'probit' model_type, y must be a logical vector"
   )
   
-  # Test with y containing values other than 0/1
-  y_invalid <- c(rep(0, n-1), 2)
+  # Test with numeric y (even if binary 0/1)
+  y_numeric <- c(rep(0, n-1), 1)
   expect_error(
-    hapr_first_stage(y = y_invalid, gc = gc, w = w, model_type = "probit"),
-    "For 'probit' model_type, y must be a binary numeric vector"
+    hapr_first_stage(y = y_numeric, gc = gc, w = w, model_type = "probit"),
+    "For 'probit' model_type, y must be a logical vector"
   )
 })

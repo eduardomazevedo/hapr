@@ -12,9 +12,9 @@ source("dev/mock_dataset.R")
 set.seed(123)
 
 # Parameters for mock dataset
-n <- 1000000
-var_v <- 0.05
-var_epsilon <- 0.9
+n <- 100000
+var_v <- 0.25
+var_epsilon <- 0.5
 beta_g <- 1.42  # Effect of future PRS (gf) on outcome
 beta_w <- c(0.1, 0.17, 0.27, -0.27)  # Intercept + 3 covariate effects
 theta <- c(0.0, 0.1, -0.2, 0.3)  # Intercept + 3 covariate effects for gc ~ w
@@ -24,14 +24,13 @@ improvement_ratio <- 1 / (1 - var_epsilon)
 
 # Create dataset
 cat("Creating mock dataset...\n")
-data <- mock_dataset_lm(
+data <- mock_dataset_probit(
   n = n,
   var_v = var_v,
   var_epsilon = var_epsilon,
   beta_g = beta_g,
   beta_w = beta_w,
-  theta = theta,
-  var_y = var_y
+  theta = theta
 )
 
 # Extract components
@@ -48,7 +47,7 @@ first_stage_fit <- hapr_first_stage(
   y = y,
   gc = gc,
   w = w,
-  model_type = "lm"
+  model_type = "probit"
 )
 
 # Second stage

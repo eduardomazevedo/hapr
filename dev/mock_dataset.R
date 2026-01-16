@@ -15,12 +15,15 @@ mock_dataset_lm <- function(
     # Normalize w so that var(theta %*% w) = 1 - var_v - var_epsilon
     # Since w is standard Gaussian, var(theta'w) = theta'*theta = sum(theta^2)
     w = w * sqrt((1 - var_v - var_epsilon) / sum(theta[-1]^2))
-    w <- cbind(1, w)
-
-    gf = v + w %*% theta
+    
+    # Create w with intercept for internal calculations
+    w_with_int <- cbind(1, w)
+    
+    gf = v + w_with_int %*% theta
     gc = gf + e
-    y = beta_g * gf + w %*% beta_w + rnorm(n, 0, var_y)
+    y = beta_g * gf + w_with_int %*% beta_w + rnorm(n, 0, var_y)
 
+    # Return w without intercept (as expected by hapr_first_stage)
     return(list(w = w, gf = gf, gc = gc, y = y))
 }
 

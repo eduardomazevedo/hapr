@@ -146,13 +146,12 @@ calculate_analytical_jacobian <- function(model_type, gamma, theta, var_total, p
   nt <- length(theta)
   nb <- length(beta)
   
-  # Identify indices
+  # Identify indices using strict ordering
   # Note: gamma ordering is: gc, (Intercept), w1, w2, ...
   #      theta ordering is: (Intercept), w1, w2, ...
   # This ordering is guaranteed by hapr_first_stage and is critical for correct alignment
-  i_gc <- which(names(gamma) == "gc")
-  if(length(i_gc) == 0) stop("Could not find 'gc' in gamma coefficients")
-  i_w <- which(names(gamma) != "gc")  # Includes intercept and w coefficients
+  i_gc <- 1L  # First element of gamma is always gc
+  i_w <- 2L:ng  # Remaining elements are (Intercept), w1, w2, ...
   
   # Constants/Derivatives w.r.t var_total (x)
   # k = var_epsilon
@@ -297,8 +296,9 @@ calculate_parameters <- function(model_type, coefficients, improvement_ratio) {
   theta <- coefficients$theta
   beta <- gamma  # default fallback
 
-  i_gc <- which(names(gamma) == "gc")
-  i_other <- which(names(gamma) != "gc")  # Includes intercept and w, in order: (Intercept), w1, w2, ...
+  # Use strict ordering: gamma is gc, (Intercept), w1, w2, ...
+  i_gc <- 1L  # First element of gamma is always gc
+  i_other <- 2L:length(gamma)  # Remaining elements are (Intercept), w1, w2, ...
 
   if (model_type == "lm") {
     beta[i_gc] <- gamma[i_gc] / posterior$a

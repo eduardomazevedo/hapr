@@ -56,22 +56,33 @@ print.hapr_fit <- function(x, ...) {
   cat("Model type:", x$model_type, "\n\n")
 
   cat("Beta coefficients (future PRS effects):\n")
-  beta_to_show <- x$parameters$beta[1:min(5, length(x$parameters$beta))]
-  coef_table <- data.frame(Estimate = beta_to_show, row.names = names(beta_to_show))
+  n_coef <- nrow(x$ci_beta)
+  n_to_show <- min(5, n_coef)
+  coef_table <- x$ci_beta[1:n_to_show, , drop = FALSE]
   print(coef_table, digits = 4)
-  if (length(x$parameters$beta) > 5) {
-    cat("  Showing first 5 of", length(x$parameters$beta), "coefficients\n")
+  if (n_coef > 5) {
+    cat("  Showing first 5 of", n_coef, "coefficients\n")
   }
   cat("\n")
 
   cat("Improvement ratio:", sprintf("%.4f", x$stats$improvement_ratio), "\n")
 
   if (!is.na(x$stats$r2_current)) {
-    cat("R\U00B2 current:", sprintf("%.4f", x$stats$r2_current), "\n")
+    # Use scientific notation for very small values (< 0.0001)
+    if (abs(x$stats$r2_current) < 0.0001 && x$stats$r2_current != 0) {
+      cat("R\U00B2 current:", sprintf("%.4e", x$stats$r2_current), "\n")
+    } else {
+      cat("R\U00B2 current:", sprintf("%.4f", x$stats$r2_current), "\n")
+    }
   }
 
   if (!is.na(x$stats$r2_future)) {
-    cat("R\U00B2 future:", sprintf("%.4f", x$stats$r2_future), "\n")
+    # Use scientific notation for very small values (< 0.0001)
+    if (abs(x$stats$r2_future) < 0.0001 && x$stats$r2_future != 0) {
+      cat("R\U00B2 future:", sprintf("%.4e", x$stats$r2_future), "\n")
+    } else {
+      cat("R\U00B2 future:", sprintf("%.4f", x$stats$r2_future), "\n")
+    }
   }
 
   cat("Max improvement ratio:", sprintf("%.4f", x$stats$max_improvement_ratio), "\n")
@@ -152,10 +163,20 @@ print.summary.hapr_fit <- function(x, ...) {
   cat("Improvement ratio:", sprintf("%.4f", x$improvement_ratio), "\n")
   cat("Max improvement ratio:", sprintf("%.4f", x$max_improvement_ratio), "\n")
   if (!is.na(x$r2_current)) {
-    cat("R\U00B2 current:", sprintf("%.4f", x$r2_current), "\n")
+    # Use scientific notation for very small values (< 0.0001)
+    if (abs(x$r2_current) < 0.0001 && x$r2_current != 0) {
+      cat("R\U00B2 current:", sprintf("%.4e", x$r2_current), "\n")
+    } else {
+      cat("R\U00B2 current:", sprintf("%.4f", x$r2_current), "\n")
+    }
   }
   if (!is.na(x$r2_future)) {
-    cat("R\U00B2 future:", sprintf("%.4f", x$r2_future), "\n")
+    # Use scientific notation for very small values (< 0.0001)
+    if (abs(x$r2_future) < 0.0001 && x$r2_future != 0) {
+      cat("R\U00B2 future:", sprintf("%.4e", x$r2_future), "\n")
+    } else {
+      cat("R\U00B2 future:", sprintf("%.4f", x$r2_future), "\n")
+    }
   }
 
   cat("Var(v):", sprintf("%.4f", x$var_v), "\n")
