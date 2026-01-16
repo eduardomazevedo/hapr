@@ -1,0 +1,577 @@
+\documentclass[12pt]{article}
+\usepackage{custom}
+
+% Data reading
+\newcommand{\data}[1]{\input{../output/constants/#1.txt}\unskip}
+
+% External references for any separately compiled online appendix.
+\usepackage{xr}
+\externaldocument{"manuscript"}
+
+\begin{document}
+
+\title{Supplementary Information for ``HAPR: Heritability Adjusted Prediction quantifies\\
+the clinical utility of polygenic risk scores''}
+
+\author{
+  Gareth Markel\thanks{Interdisciplinary Center for Economic Science and Department of Economics, George Mason University. \texttt{garethmarkel@gmail.com}} \and
+  Jonathan P. Beauchamp\thanks{Interdisciplinary Center for Economic Science and Department of Economics, George Mason University. \texttt{jonathan.pierre.beauchamp@gmail.com}} \and
+  Eduardo M. Azevedo\thanks{Business Economics and Public Policy Department of the Wharton School, University of Pennsylvania. \texttt{eazevedo@wharton.upenn.edu}} \and
+  Richard Karlsson Linnér\thanks{Department of Economics, Universiteit Leiden. \texttt{r.karlsson.linner@law.leidenuniv.nl}}
+}
+
+\date{}
+
+\maketitle
+
+\section{Theory}
+
+We now consider a theoretical model where we derive properties of our estimators, such as efficiency and consistency. We also describe the estimators. We note below which estimators are implemented in the R package ``HAPR'', and which are implemented in the Julia code.
+
+We also derive an identification theorem. The identification theorem shows that, under certain assumptions, it is possible to estimate the properties of the future PRS given heritability estimates and the data available today.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Model and basic assumptions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+We let uppercase letters denote random variables and lowercase letters denote realizations of these random variables.
+
+Our model considers a population of individuals. An individual is a tuple of random variables $(Y, G_f, G_c, \boldsymbol W)$:
+\begin{itemize}
+    \item $Y$ in $\mathcal{Y}$ is the {\bf outcome} of interest. This is a real number in linear models (e.g., height, educational attainement), a binary in the probit model (e.g., disease status), or a time in the survival model (e.g., time to disease onset).
+    \item $G_f$ in $\mathbb R$ is the {\bf true genetic predictor}, or {\bf future PRS}, of the outcome. This is the only variable that is not observed in the data. This would be the PRS calculated from a currently infeasible GWAS, which attains higher predictive power than what is feasbile today.
+    \item $G_c$ in $\mathbb R$ is the {\bf current PRS}, which can be observed in the data.
+    \item $\boldsymbol W$ in $\mathbb R^p$ are {\bf covariates}, which are observed in the data. For example, for height covariates can be parental height. For disease status covariates can be sex, age, biomarkers, and / or a clinical index.
+\end{itemize}
+
+Let $\mathbb P$ be the {\bf joint distribution} of these variables. We make the following assumptions.
+
+%%%%%
+% Assumption 1
+\begin{assumption}[Distributions of the covariates]
+    $\boldsymbol W$ is distributed according to a distribution $P_{\boldsymbol W}$ in Euclidean space. $\boldsymbol{W}$ is linear independent in the sense that $\mathbb{E}[\boldsymbol W \boldsymbol W^T]$ is invertible.
+    \label{assn:covariates}
+\end{assumption}
+
+% Assumption 2
+\begin{assumption}[Gaussian future PRS]
+    Conditional on observables, the future PRS has a Gaussian distribution. The variance is constant and the mean is a linear function of observables:
+    
+    \begin{equation}
+        G_f = \boldsymbol W \boldsymbol \theta + V,
+        \label{eq:Gf}
+    \end{equation}
+    with $V$ independent of $\boldsymbol W$ and $V \sim \mathcal N(0, \sigma^2_V)$.
+    \label{assn:future-PGI-normality}
+\end{assumption}
+
+
+% Assumption 3
+\begin{assumption}[Noisy current PRS]
+    The observed current PRS $G_c$ has unit variance, $\Var(G_c) = 1$, and is a noisy estimate of $G_f$:
+    \begin{equation}
+        G_c := G_f + \epsilon,
+        \label{eq:Gc}
+    \end{equation}
+    where the noise term $\epsilon$ is independent of $G_f$ and $\epsilon \sim \mathcal{N}(0, \sigma_\epsilon^2)$\text{.}
+    \label{assn:noisy-pgi}
+\end{assumption}
+
+% Assumption 4
+\begin{assumption}[Latent index]
+    \label{assn:latent-index}
+    Define the random variable
+    \[
+        L := \beta_g G_f + \boldsymbol{\beta}_w \boldsymbol{W}.
+    \]
+    Conditional on \(L = \ell\), the outcome \(Y\) follows a pdf (or pmf if \(\mathcal{Y}\) is discrete)
+    \[
+        f\bigl(y | \ell; \boldsymbol{\delta}\bigr).
+    \]
+\end{assumption}
+
+Note that Assumption (\ref{assn:latent-index}) allows the distribution to have an additional parameter $\boldsymbol{\delta}$. For example, in a linear model $\boldsymbol{\delta}$ is the variance of the error term, and in a parametric survival model $\boldsymbol{\delta}$ is the vector of parameters of the hazard function.
+
+The parameters of the model are $\Gamma := (\mathbb{P}_{\boldsymbol W}, \sigma^2_V, \sigma^2_\epsilon, \boldsymbol{\theta}, \boldsymbol{\beta}, \boldsymbol{\delta})$. We say that the model is \textbf{identified} if there is a unique value of the parameters that is consistent with the distribution of the observables $\left(G_c, \boldsymbol W, Y\right)$.
+
+
+\subsection{Heritability assumption and identifiability}
+The key observation is that, even though $G_f$ is not observed, we can identify the model if we assume that the predictive power of $G_f$ is known. Formally, we make the following assumption:
+
+\begin{assumption}[Heritability]
+    There exists a random variable, the \textbf{GWAS target} $Y_{\text{GWAS}} \in \mathbb{R}$, such that the $R^2$ of a linear model of the current and future PRS are given by known values $R^2_c$ and $R^2_f$.
+    \label{assn:known_heritability}
+\end{assumption}
+
+It is easier to understand assumption \ref{assn:known_heritability} in practical examples, like our applications. In the height application, our outcome $Y$ is height which is continuous. The PRSs we use are drawn from GWASs for height, so that $Y_{\text{GWAS}} = Y$. In the breast cancer screening application, we can use either a static model or a survival model. When using a static model like probit, the outcome $Y$ is cancer status in a certain period, which is binary. The PRSs are drawn from GWASs of breat cancer. So we take $Y_{\text{GWAS}}$ to be the latent variable in the breast cancer GWAS, which means using the $R^2$ from the GWAS on the liability scale. In the survival model for breast cancer, our $Y$ specifies events and survival times. The breast cancer PRS is the same used in the probit case for breast cancer. In this case, a practically reasonable approach is to set again $Y_{\text{GWAS}}$ to be the latent variable in the breast cancer GWAS, which means using the $R^2$ from the GWAS on the liability scale. After presenting these particular cases we discuss below how to make these practical decisions.
+
+We define the \textbf{improvement ratio} as $R^2_f / R^2_c$. The first important observation is that the variance of $\epsilon$ is a function of the improvement ratio.
+
+\begin{lemma}[Variance of $\epsilon$]
+    \label{lemm:variance_epsilon}
+    The variance of $\epsilon$ is
+    \begin{equation}
+        \sigma^2_\epsilon = 1 - \frac{R_c^2}{R_f^2}.
+        \label{eq:sigma2_eps_R2_formula}
+    \end{equation}
+\end{lemma}
+
+\begin{proof}
+    Per Assumption \ref{assn:known_heritability}, the current and future pseudo $R^2$'s on the GWAS target are known. These are given by the squared correlation between the GWAS target and the current and future PRSs, respectively: 
+    \[R_{c}^{2}=\frac{\Cov[Y_{\text{GWAS}},G_{c}]^{2}}{\Var[G_{c}]\Var[Y_{\text{GWAS}}]}\]
+    and
+    \[R_{f}^{2}=\frac{\Cov[Y_{\text{GWAS}},G_{f}]^{2}}{\Var[G_{f}]\Var[Y_{\text{GWAS}}]}\text{.}\]
+    Therefore, using the fact that $\Cov[Y_{\text{GWAS}},G_{f}] = \Cov[Y_{\text{GWAS}},G_{c}]$ and $\Var[G_c] = 1$,
+    \[\frac{R_{c}^{2}}{R_{f}^{2}}
+    =
+    \frac{\Var[G_{f}]}{\Var[G_{c}]}
+    =
+    \Var[G_{f}]
+    =
+    1 - \sigma^2_\epsilon
+    \text{.}\]
+\end{proof}
+
+The second important observation is that $G_f$ is conditionally normally distributed given $\boldsymbol W$ and $G_c$. Moreover, the parameters of the conditional distribution are easily calculated. This follows because $G_f$ has mean $\boldsymbol w \boldsymbol \theta$, and we observe a noisy signal of it, $g_c$. The posterior distribution follows from a classic result in Bayesian statistics. The intuition is that, if a random variable has a Gaussian prior, then after observing a signal with Gaussian noise, the posterior is also Gaussian. The mean of the posterior is an average of the prior and the signal, as in the formula.
+
+\begin{lemma}\label{lem:g_star_linear_combo} Conditional on $G_c = g_c$ and $\boldsymbol{W} = \boldsymbol{w}$, $G_f$ is normally distributed with mean
+    \[
+    a g_c + b \boldsymbol{w} \boldsymbol{\theta}
+    \]
+    and variance $c^2$, where
+    \begin{align*}
+    a & =\frac{\frac{1}{\sigma_{\epsilon}^{2}}} {\frac{1}{\sigma^2_{\epsilon}} + \frac{1}{\sigma^2_V}}\text{,} \\
+    b & =\frac{\frac{1}{\sigma_{V}^{2}}} {\frac{1}{\sigma^2_{\epsilon}} + \frac{1}{\sigma^2_V}}\text{,} \\
+    \frac{1}{c^2} & = \frac{1}{\sigma^2_{\epsilon}} + \frac{1}{\sigma^2_V} \text{.}
+    \end{align*} 
+\end{lemma}
+
+\begin{proof}
+By Assumption \ref{assn:future-PGI-normality}, conditional on
+$\boldsymbol{W}=\boldsymbol{w}$, $G_f = \boldsymbol{w}\boldsymbol{\theta} + V$, with $V \sim N(0,\sigma_{V}^{2})$. And by Assumption \ref{assn:noisy-pgi}, $G_c = G_f + \epsilon$, with $\epsilon\sim N(0,\sigma_{\epsilon}^{2})$. Lemma \ref{lem:g_star_linear_combo} then follows from the formula in \textcite[p. 40, Equation 2.10]{gelman2013bayesian}. This is a standard formula from Bayesian statistics.
+\end{proof}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Likelihood and identification theorem}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Let $g(y, g_c, \boldsymbol w ; \boldsymbol \Gamma)$ be the likelihood of $(Y, G_c, \boldsymbol W)$. This can be decomposed into the conditional likelihoods
+\begin{equation}
+    \label{eq:likelihood}    
+    g(y, g_c, \boldsymbol w ; \boldsymbol \Gamma) =
+    g _{\boldsymbol W} (\boldsymbol w) \cdot
+    g_{LM}(g_c | \boldsymbol w ; \boldsymbol \theta, \sigma^2_V) \cdot
+    g_{NL}(y | g_c, \boldsymbol w; \boldsymbol \beta, \boldsymbol \delta)
+\end{equation}
+where the subscripts $LM$ and $NL$ stand for linear model and nonlinear model, respectively. The linear model likelihood is trivial. The nonlinear model likelihood can be derived by substituting Equation \ref{eq:Gf} and using Lemma \ref{lem:g_star_linear_combo}:
+
+\begin{align*}
+    g_{NL}(y | g_c, \boldsymbol{w}; \boldsymbol{\beta}, \boldsymbol{\delta}) 
+    &= \mathbb{E} \left[ 
+        f\left( y | \beta_g G_f + \boldsymbol{\beta}_w \boldsymbol{w}; \boldsymbol{\delta} \right) 
+        \mid
+        G_c = g_c, \boldsymbol W = \boldsymbol w
+    \right] \\
+    &= \mathbb{E} \left[ 
+        f\left( y |
+        \beta_g a g_c +
+        \beta_g b \boldsymbol{w} \boldsymbol{\theta} +
+        \boldsymbol{\beta}_w \boldsymbol{w} +
+        c Z;
+        \boldsymbol{\delta} \right) 
+    \right]\text{,}
+\end{align*}
+
+where $Z$ is a standard normal random variable. To clarify the numerical use of this formula, note that it can be written in integral form as
+
+\begin{align}
+    \label{eq:g_nl}
+    g_{NL}(y | g_c, \boldsymbol{w}; \boldsymbol{\beta}, \boldsymbol{\delta}) 
+    &= \int f\left( y | \beta_g a g_c + \beta_g b \boldsymbol{w} \boldsymbol{\theta} + \boldsymbol{\beta}_w \boldsymbol{w} + c z; \boldsymbol{\delta} \right) \, \phi(z) \, dz\text{,}
+\end{align}
+
+where $\phi$ is the standard normal density.
+
+With this formula, we can show that the model is identified essentially as the likelihood of the true model is strictly concave in the parameters.
+
+\begin{theorem}[identification]
+    If assumptions (\ref{assn:covariates})-(\ref{assn:latent-index}) hold, and if $f$ is strictly concave in $\boldsymbol{\beta}$ and $\boldsymbol{\delta}$, then the model is identified.
+    \label{thm:identification}
+\end{theorem}
+\begin{proof}
+    $\mathbb P _ {\boldsymbol{W}}$ is identified because $\boldsymbol{W}$ is observed. $\sigma^2_\epsilon$ is identified from the improvement ratio by Lemma \ref{lemm:variance_epsilon}. The parameters \(\boldsymbol{\theta}\) and \(\sigma^2_V\) are identified because, given assumptions (\ref{assn:covariates})-(\ref{assn:latent-index}), the linear component of the model corresponds to a classical linear regression setup. Under these standard conditions (full rank of the design matrix, independence, and homoscedasticity), the linear regression parameters and the variance of the error term are uniquely determined by the population moments, ensuring their identification. As for $\boldsymbol{\beta}$ and $\boldsymbol{\delta}$, the likelihood in equation (\ref{eq:g_nl}) is a linear combination of strictly concave functions, and thus strictly concave itself. Thus, the likelihood has a unique maximizer which equals the true vector of parameters. Therefore, the model is identified.
+\end{proof}
+
+Concavity is a restrictive assumption. Nevetheless, the theorem suggests that it is often possible to recover the true model using only the currently available data and heritability estimates. We will see below that the true model is identified in many of the most common applications of polygenic scores.
+
+Finally, our results also point to simple estimation procedures. The likelihood decomposition in equations (\ref{eq:likelihood}) and (\ref{eq:g_nl}) allows for maximum likelihood estimation. In general, the maximum likelihood above involves a one-dimensional integral over $z$. This involves some computation but is over only one dimension, so it is still feasible for medium to large problems.
+
+Moreover, in many particular cases estimation is greatly simplified. We will give much more efficient estimators below for linear models, probit models, and the Cox hazard model. In all of these cases, it turns out that the model can estimated in a simple two-stage procedure. The first stage is to run a feasible statistical model with $G_c$ instead of $G_f$. So we simply run the linear, probit, or Cox model using $G_c$. It turns out that there are simple formulas for the parameters in terms of the results of this first-stage feasible regressions. Thus, the second stage simply applies these formulas. The HAPR package implements these two-stage estimators for linear, probit, and Cox models.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Particular cases}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+We now show that, in many relevant particular cases, the model is identified and can be estimated with even simpler procedures. We consider linear, probit, Cox models, and parametric survival models.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Linear Model}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The linear model case has been studied in \textcite{becker_2021_pgirepo}. \textcite{van_kippersluis_oriv_2023} proposed an interesting new estimation approach. Thus, they are the first to study this model, and to provide estimators. Our only marginal contribution is that we show that our estimator is a maximum likelihood estimator, and thus is asymptotically efficient.
+
+Consider the case where we have
+\begin{assumption}[Linear model with homoskedastic Gaussian errors]
+    The outcome is
+    \begin{equation*}
+        Y = \beta_g G_f + \boldsymbol{\beta}_w \boldsymbol W + \eta\text{,}
+    \end{equation*}
+    where $\eta$ is independent of $G_f$, $\boldsymbol W$, and $G_c$, and $\eta \sim \mathcal N(0, \sigma^2_\eta)$.
+    \label{assn:linear_model}
+\end{assumption}
+
+In applications, the most common case is that we draw PRS scores from a GWAS that was made on the same target trait $Y$ that we are interested in. So $Y_\text{GWAS} = Y$. We then set the improvement ratio given how much we expect the GWAS to improve in terms of $R^2$.
+
+Conditional on $\boldsymbol W = \boldsymbol w$ and $G_c = g_c$, $G_f$ is normally distributed with mean $a g_c + b \boldsymbol w \boldsymbol \theta$ and variance $c^2$. Thus, $Y$ is distributed as
+
+\[
+    Y = \beta_g (a g_c + b \boldsymbol w \boldsymbol \theta) + \boldsymbol{\beta}_w \boldsymbol w + \eta + c Z\text{,}
+\]
+
+where $Z$ is a standard normal random variable. Let $\boldsymbol{\gamma}$ be the coefficients of a regression of $Y$ on $G_c$ and $\boldsymbol W$. Then $\boldsymbol{\gamma}$ is a linear combination of $\boldsymbol{\beta}$ and $\boldsymbol{\theta}$:
+
+\begin{eqnarray}
+    \label{eq:gamma_conversion_linear}
+    \gamma_g
+    &=&
+    \beta_g a
+    \\
+    \boldsymbol{\gamma}_w
+    &=&
+    \beta_g b \boldsymbol \theta + \boldsymbol{\beta}_w\text{.}
+\end{eqnarray}
+
+Therefore, we can calculate $\boldsymbol{\beta}$ from $\boldsymbol{\gamma}$ as
+
+\begin{eqnarray}
+    \label{eq:beta_conversion_linear}
+    \beta_g
+    &=&
+    \frac{\gamma_g}{a}
+    \\
+    \boldsymbol{\beta}_w
+    &=&
+    \boldsymbol{\gamma}_w - \beta_g b \boldsymbol \theta \text{.}
+\end{eqnarray}
+
+This yields extremely computationally efficient estimation procedures. We can simply run regressions of $G_c$ on $\boldsymbol{W}$ and $Y$ on $G_c$ and $\boldsymbol{W}$. Then we calculate all parameters from the coefficients of these regressions. Standard errors can be obtained with the delta method.
+
+Any such estimator is efficient, because it is asymptotically equivalent to maximum likelihood estimation with the decomposition in equation (\ref{eq:likelihood}). Thus, any other estimator will either be asymptotically less efficient or asymptotically equivalent to this one.
+
+In HAPR, we implement the following consistent, asymptotically efficient multi-step procedure.
+\begin{enumerate}
+    \item Calculate $\sigma^2_\epsilon$ from the improvement ratio.
+    \item Run a regression of $G_c$ on $\boldsymbol W$ to obtain $\boldsymbol \theta$ and $\sigma^2_V$.
+    \item Run a regression of $Y$ on $G_c$ and $\boldsymbol W$ to obtain $\boldsymbol{\gamma}$.
+    \item Calculate $\boldsymbol{\beta}$ from $\boldsymbol{\gamma}$ using the formulae above.
+    \item Calculate $\sigma^2_\eta$ from the variance of residuals in the regression being $\sigma^2_\eta + c^2$.
+    \item Calculate standard errors with the delta method.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Probit Model}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Consider the case where we have
+\begin{assumption}[Probit model]
+    The outcome is binary
+    \[
+        Y = \{L > 0\}
+    \]
+    where the latent variable $L$ is
+    \[
+        L = \beta_g G_f + \boldsymbol{\beta}_w \boldsymbol W + \eta
+        \text{.}
+    \]
+    The error term $\eta$ is independent of $G_f$, $\boldsymbol W$, and $G_c$, and $\eta \sim \mathcal N(0,1)$.
+\end{assumption}
+
+In applications, the GWAS target is usually the latent variable $Y_\text{GWAS} = L$. We then take the improvement ratio from the expected improvement in terms of the $R^2$ in the liability scale.
+
+The probit model is analyzed in \textcite{azevedo2024genetic}. They find that $\beta$ can be recovered from the coefficients $\gamma$ of a probit regression of $Y$ on $G_c$ and $\boldsymbol W$. Their formula for $\beta$ is
+\begin{eqnarray*}
+    \beta_{g}
+    &=&
+    \frac{\gamma_{g}}{\sqrt{a^2 - \gamma_{g}^2c^2}} \\
+    \boldsymbol{\beta}_w
+    &=&
+    \boldsymbol{\gamma}_{w}\sqrt{1+c^{2}\beta_{g}^{2}}-b\boldsymbol{\theta}\beta_{g}\text{.}
+\end{eqnarray*}
+
+The HAPR package implements this multi-step estimation procedure. The procedure follows the same lines as the linear model, and is also consistent and asymptotically efficient. HAPR uses the following steps:
+
+\begin{enumerate}
+    \item Calculate $\sigma^2_\epsilon$ from the improvement ratio.
+    \item Run a linear regression of $G_c$ on $\boldsymbol W$ to obtain $\boldsymbol \theta$ and $\sigma^2_V$.
+    \item Run a probit regression of $Y$ on $G_c$ and $\boldsymbol W$ to obtain $\boldsymbol{\gamma}$.
+    \item Calculate $\boldsymbol{\beta}$ from $\boldsymbol{\gamma}$ using the formulae above.
+    \item Calculate standard errors with the delta method.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Survival models}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:survival_models}
+Survival models correspond to the case there $Y = (T, D)$, where $T$ is the time to an event and $D$ is a discrete censoring variable. For simplicity, we momentarily ignore censoring, and consider the case where $D \equiv 1$, meaning that no observations are censored. We omit $D$ for simplicity.
+
+We denote the cumulative distribution of $f$ as $F(t | \ell ; \boldsymbol \delta)$ and denote the survival function as $S = 1-F$. Denote the hazard rate as the function $\lambda$ such that
+\[
+    S(t | \ell ; \boldsymbol \delta)
+    =
+    \exp\left(-\int_0^t \lambda(\tau | \ell ; \boldsymbol \delta) \, d\tau\right)
+    \text{.}
+\]
+
+We consider the most widely used specification that
+\begin{equation}
+    \label{eq:parametric_hazard}
+    \lambda(t |\ell ; \boldsymbol{\delta})
+    =
+    \lambda_0(t | \boldsymbol{\delta}) \cdot e^\ell
+    \text{.}
+\end{equation}
+
+This covers both the case of parametric survival models, where $\lambda_0(t | \boldsymbol{\delta})$ is a parametric function of $t$, and the case of semiparametric survival models, where $\lambda_0(t | \boldsymbol{\delta})$ is a nonparametric function of $t$. The most popular semiparametric survival model is the Cox model, which does not impose any structure on $\lambda_0(t | \boldsymbol{\delta})$.
+
+Before considering these two cases, we first make a key observation that often simplifies estimation. The point is that, conditional on observables, the expected hazard rate has a simple formula, using the same Bayesian logic as in the linear and probit models. We note this as the following lemma.
+
+\begin{lemma}
+    \label{lem:expected_hazard_rate}
+    Conditional on $G_c = g_c$ and $\boldsymbol W = \boldsymbol w$, the hazard rate $\lambda$ is
+    \[
+    \E \left[\lambda(t | L ; \boldsymbol \delta) | g_c, \boldsymbol w\right]
+    =
+    e ^ {(\beta _g c)^2 / 2}
+    \lambda_0(t | \boldsymbol \delta) \cdot \exp \left(\gamma_g g_c + \boldsymbol{\gamma}_w \boldsymbol{w} \right)
+    \text{,}
+    \]
+    where $a$, $b$, and $c$ are as in Lemma \ref{lem:g_star_linear_combo}, and the $\boldsymbol{\gamma}$ are given by equations (\ref{eq:gamma_conversion_linear}).
+\end{lemma}
+\begin{proof}
+    Conditional on $G_c = g_c$ and $\boldsymbol W = \boldsymbol w$, $G_f$ is normally distributed as $a g_c + b \boldsymbol w \boldsymbol \theta + cZ$, where $Z$ is a standard normal random variable. Thus $L$ is distributed as
+    \[
+        \beta_g (a g_c + b \boldsymbol w \boldsymbol \theta)
+        +
+        \boldsymbol{\beta}_w \boldsymbol w + c Z
+        \text{.}
+    \]
+    So
+    \begin{eqnarray*}
+        \E \left[\lambda(t | L ; \boldsymbol \delta) | g_c, \boldsymbol w\right]
+        &=&
+        \E
+        \left [
+        \lambda_0(t | \boldsymbol \delta) e ^ L
+        \right ]
+        \\
+        &=&
+        \E
+        \left [
+        \lambda_0(t | \boldsymbol \delta)
+        \exp\left(
+            \beta_g (a g_c + b \boldsymbol w \boldsymbol \theta)
+            +
+            \boldsymbol{\beta}_w \boldsymbol w + \beta_g c Z
+        \right)
+        \right ]
+        \\
+        &=&
+        e ^ {(\beta _g c)^2 / 2}
+        \lambda_0(t | \boldsymbol \delta)
+        \exp\left(
+            \beta_g (a g_c + b \boldsymbol w \boldsymbol \theta)
+            +
+            \boldsymbol{\beta}_w \boldsymbol w
+        \right)
+        \text{.}
+    \end{eqnarray*}
+    The result then follows from the definition of $\boldsymbol{\gamma}$ in equation (\ref{eq:gamma_conversion_linear}).
+\end{proof}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Parametric survival models}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+We implemented the Weibull, exponential, and piecewise exponential parametric survival models for $f$. The three models, as we implement them, only differ in the base rate $\lambda_0(t | \boldsymbol{\delta})$:
+\begin{itemize}
+    \item For the \textbf{exponential model}, the base rate is constant: $\lambda_0(t | \boldsymbol{\delta}) = c$. 
+    \item The \textbf{Weibull model} allows for a decreasing or increasing base rate: $\lambda_0(t | \boldsymbol{\delta}) = c \cdot t ^ {p - 1}$, for $p > 0$. When $p=1$, the Weibull model is equivalent to the exponential model.
+    \item The \textbf{piecewise exponential model} allows for a nonparametric base rate that changes at $K$ predefined time intervals:
+    \[ 
+    \lambda_0(t | \boldsymbol{\delta}) =
+    \begin{cases}
+        \lambda_1, & 0 \leq t < t_1 \\
+        \lambda_2, & t_1 \leq t < t_2 \\
+        \vdots \\
+        \lambda_K, & t_{K-1} \leq t < \infty \\        
+    \end{cases}
+    \]    
+    
+    With sufficiently small intervals, the piecewise exponential model provides a flexible approximation to the Cox model’s baseline hazard function.
+\end{itemize}
+
+We implemented these models in the Julia language, to take advantage of automatic gradients.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Censoring}\label{section:censoring}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The derivation above assumes that we observe the event time for every individual. We can extend this to the case where there are observed left and right random censoring times $T_L \leq T_R$, which are independent of the other variables. Define an individual's censoring status as $C = \tt{left}$ if $T_D<T_L$, $C = \tt{right}$ if $T_D>T_R$, and $C = \tt{uncensored}$ otherwise. Define the observed time as $T_O = T_L$ if $C = \tt{left}$, $T_O = T_R$ if $C = \tt{right}$, and $T_O = T_D$ if $C = \tt{uncensored}$.
+
+We can write the conditional density $f_O$ of $T_O$ as follows:
+\begin{align}
+    f_O(t_O | c, g_f, \boldsymbol w ; \boldsymbol \delta) =
+    \begin{cases}
+        f(t_O | g_f, \boldsymbol w ; \boldsymbol \delta)  & \text{if } c = \tt{uncensored} \\        
+        F(t_O | g_f, \boldsymbol w ; \boldsymbol \delta)    & \text{if } c = \tt{left} \\
+        1-F(t_O | g_f, \boldsymbol w ; \boldsymbol \delta)   & \text{if } c = \tt{right}  \text{,} \\        
+    \end{cases} 
+\end{align}
+where $f$ is the conditional density of $T$ given $G_f = g_f$ and $\boldsymbol W = \boldsymbol w$ and $F$ the corresponding CDF.
+
+These cases can be estimated with the maximum likelihood procedure. This is done in our Julia implementation of the parametric survival models.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{The Cox Survival Model}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The Cox model is a semi-parametric model, given by equation (\ref{eq:parametric_hazard}), but where the base hazard $\lambda_0(t)$ is unspecified.
+
+The standard estimation approach in the Cox model is to use a partial likelihood to estimate the coefficients. The partial likelihood only takes into account the order in which events happen. The advantage is that the coefficients can be estimated regardless of the base rates.
+
+Consider the case where we have $n$ events at distinct times $t_i$. The formula for the partial likelihood at time $t_i$ is
+\[
+    \frac{
+        \exp\left(
+            \beta_g g_{f_i} + \boldsymbol{\beta}_w \boldsymbol w_i
+        \right)
+    }{
+        \sum_{j \in R(t_i)}
+        \exp\left(
+            \beta_g g_{f_j} + \boldsymbol{\beta}_w \boldsymbol w_j
+        \right)
+    }
+    \text{,}
+\]
+where $R(t_i)$ is the set of individuals at risk at time $t_i$.
+
+In our data, we observe $G_c$ but not $G_f$. Conditional on our data, the partial likelihood takes an expectation over $G_f$:
+\[
+    \mathbb{E} 
+    \left[
+    \frac{
+        \exp\left(
+            \beta_g G_{f_i} + \boldsymbol{\beta}_w \boldsymbol{w}_i
+        \right)
+    }{
+        \displaystyle\sum_{j \in R(t_i)}
+        \exp\left(
+            \beta_g G_{f_j} + \boldsymbol{\beta}_w \boldsymbol{w}_j
+        \right)
+    }
+    \mathrel{\Bigg|}
+    \begin{array}{c}
+        \text{for all } k, \; G_{c_k} = g_{c_k}, \\ 
+        \boldsymbol{W}_k = \boldsymbol{w}_k
+    \end{array}
+    \right]
+    \text{.}
+\]
+
+We can now use lemma \ref{lem:g_star_linear_combo} to substitute $G_f$ by its conditional expectation:
+\[
+    \mathbb{E} 
+    \left[
+    \frac{
+        \exp\left(
+            \beta_g a g_{c_i} + \beta_g b \boldsymbol{w}_i \boldsymbol{\theta} + \boldsymbol{\beta}_w \boldsymbol{w}_i + c Z_i
+        \right)
+    }{
+        \displaystyle\sum_{j \in R(t_i)}
+        \exp\left(
+            \beta_g a g_{c_j} + \beta_g b \boldsymbol{w}_j \boldsymbol{\theta} + \boldsymbol{\beta}_w \boldsymbol{w}_j + c Z_j
+        \right)
+    }
+    \right]
+    \text{,}
+\]
+where the $Z_i$ are standard normal random variables.
+
+The expectation of the numerator is
+\[
+    \exp\left(
+        \beta_g a g_{c_i} + \beta_g b \boldsymbol{w}_i \boldsymbol{\theta} + \boldsymbol{\beta}_w \boldsymbol{w}_i
+    \right)
+    e^{c^2 / 2}
+    \text{.}
+\]
+
+The expectation of the denominator is
+\[
+    \sum_{j \in R(t_i)}
+    \exp\left(
+        \beta_g a g_{c_j} + \beta_g b \boldsymbol{w}_j \boldsymbol{\theta} + \boldsymbol{\beta}_w \boldsymbol{w}_j
+    \right)
+    e^{c^2 / 2}
+    \text{.}
+\]
+
+By the law of large numbers, as $n$ and $R(t_i)$ go to infinity, the denominator converges to the sum of the expectations. Therefore, $e^{c^2 / 2}$ cancels out, and the partial likelihood converges to
+\[
+    \frac{
+        \exp\left(
+            \beta_g a g_{c_i} + \beta_g b \boldsymbol{w}_i \boldsymbol{\theta} + \boldsymbol{\beta}_w \boldsymbol{w}_i
+        \right)
+    }{
+        \sum_{j \in R(t_i)}
+        \exp\left(
+            \beta_g a g_{c_j} + \beta_g b \boldsymbol{w}_j \boldsymbol{\theta} + \boldsymbol{\beta}_w \boldsymbol{w}_j
+        \right)
+    }
+    \text{.}
+\]
+
+But this is the partial likelihood of a Cox model regressing $t$ on $G_c$ and $\boldsymbol W$. Thus, the Cox model can be estimated with the same multi-step procedure as the linear model. Let $\boldsymbol{\gamma}$ be the coefficients of the Cox model with covariates $G_c$ and $\boldsymbol W$. Then the desired coefficients $\boldsymbol{\beta}$ can be calculated from $\boldsymbol{\gamma}$ using the formulae in equation (\ref{eq:beta_conversion_linear}) from the linear model case.
+
+Finally, note that lemma \ref{lem:expected_hazard_rate} gives an expression for the expected hazard rate conditional on $G_c$ and $\boldsymbol W$. Thus, after estimating the base hazard from the fitted feasible Cox model using $G_c$, we can calculate the base hazard for the true model by simply multiplying the base hazard from the feasible Cox model by $e^{-(\beta_g c)^2 / 2}$.
+
+In the HAPR package, we implement this two-stage estimator for the Cox model.
+\begin{enumerate}
+    \item Calculate $\sigma^2_\epsilon$ from the improvement ratio.
+    \item Run a regression of $G_c$ on $\boldsymbol W$ to obtain $\boldsymbol \theta$ and $\sigma^2_V$.
+    \item Run a Cox model of $T$ on $G_c$ and $\boldsymbol W$ to obtain $\boldsymbol{\gamma}$ and the feasible model base hazard.
+    \item Calculate $\boldsymbol{\beta}$ from $\boldsymbol{\gamma}$ using equation (\ref{eq:beta_conversion_linear}).
+    \item Multiply the feasible model base hazard by $e^{-(\beta_g c)^2 / 2}$ to obtain the base hazard for the true model.
+    \item Calculate standard errors with the delta method.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Practical determination of the improvement ratio in survival models}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+An important practical issue is how to choose the relevant $R^2$ and improvement ratios for a survival model. Usually, the relevant GWAS are based ``lifetime'' risk of a disease. This roughly corresponds to whether the disease has occurred by some reference age $t^*$. The probability that the disease has occurred by age $t^*$ given $G_f = g_f$ and $\boldsymbol W = \boldsymbol w$ is
+\[
+    F(t^* | l ; \boldsymbol \delta)
+    \text{,}
+\]
+where
+\[
+    l = \beta_g g_f + \boldsymbol{\beta}_w \boldsymbol w
+    \text{.}
+\]
+
+Assume that $F(t^* | l ; \boldsymbol \delta)$ is monotone increasing in $l$. Then there exists a random variable $\eta$ such that the disease has occurred by age $t^*$ if and only if $L = l + \eta > 0$. This is a liability threshold model. Thus, we can assume that the GWAS target variable $Y_\text{GWAS}$ is the latent variable $L$. Practically speaking, it means that it is reasonable to take the improvement ratio as the ratio based on the liability scale $R^2$ in a GWAS of lifetime disease occurrence.
+
+\printbibliography
+\end{document}
