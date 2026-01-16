@@ -10,7 +10,7 @@ Basic applications:
   - **Genomic social science**. Studies often estimate the effect of the true genetic predictor on a trait. Regressions using a currently available noisy polygenic risk score underestimate the true effect. HAPR estimates the true effect of the genetic predictor on the trait using current data combined with heritability estimates.
   - **Insurance economics**. Making genetic predictions available may change both pricing and consumer decisions in insurance markets. HAPR can be used to estimate the predictive power of both current polygenic risk scores and also how this power is expected to change as larger GWASs become available.
 
-HAPR models quantitative traits (like height), binary traits (like disease occurrence), and survival data (like time of disease occurance). HAPR uses robust, simple estimators that are scalable to large datasets.
+HAPR models quantitative traits (like height) and binary traits (like disease occurrence). HAPR uses robust, simple estimators that are scalable to large datasets.
 
 ## Installation
 
@@ -52,8 +52,7 @@ hapr_fit <- hapr(
   gc = heart_disease_data$polygenic_score, # Current polygenic score
   w = covariates,                        # Covariates
   model_type = "probit",                 # Binary outcome model
-  r2_current = 0.02,                     # Current PRS explanatory power
-  r2_future = 0.2                        # Expected future PRS explanatory power
+  improvement_ratio = 10                 # Ratio of future R² (0.2) to current R² (0.02)
 )
 
 print(hapr_fit)
@@ -98,7 +97,7 @@ head(risk_dataset)
 #> 6  0.5425069  1.8761863    0.01532521 female 0.03395948 0.06825223 0.147726142
 ```
 
-See the vignettes for more survival model, quantitative traits, and more advanced analysis.
+See the vignettes for more examples with quantitative traits and more advanced analysis.
 
 
 ## Current repo structure
@@ -114,9 +113,8 @@ Implementation uses a two-stage estimation approach:
 This structure allows easy calculation of results under different heritability assumptions by varying the improvement ratio parameter in the second stage, without having to redo the first stage, which has the bulk of computations.
 
 ## Current functionality
-- Implemented models: lm, probit, cox.
+- Implemented models: lm, probit.
 - Estimation (`hapr`), simulation (`hapr_simulate`), prediction (`predict`).
-- Survival curves `hapr_survfit` for the Cox model.
 
 ## TODOs:
 - Implement standard errors with the delta method.

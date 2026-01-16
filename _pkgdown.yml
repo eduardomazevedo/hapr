@@ -19,7 +19,6 @@ navbar:
 articles:
   - title: "Vignettes"
     contents:
-      - cox
       - probit
 
 reference:
@@ -29,14 +28,10 @@ reference:
       - hapr_first_stage
       - hapr_second_stage
       - hapr_simulate
-      - hapr_survfit
-      - hapr_basehaz
       - abc
-      - calculate_beta
 
   - title: "S3 Methods"
     contents:
-      - plot.hapr_survfit
       - predict.hapr_fit
       - print.hapr_fit
       - summary.hapr_fit

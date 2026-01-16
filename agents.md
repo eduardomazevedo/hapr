@@ -31,7 +31,6 @@ This design allows exploring different improvement ratios without re-running the
 
 - **lm** (linear): Quantitative traits (height, education)
 - **probit**: Binary outcomes (disease status)
-- **cox**: Survival/time-to-event data (disease onset)
 
 Model-specific conversion formulas are in `calculate_parameters()` and `calculate_analytical_jacobian()`.
 
@@ -40,7 +39,7 @@ Model-specific conversion formulas are in `calculate_parameters()` and `calculat
 - `R/hapr_wrapper.R`: Main `hapr()` function (combines stages 1 & 2)
 - `R/hapr_stage_1.R`: First stage estimation
 - `R/hapr_stage_2.R`: Second stage estimation, parameter conversion, delta method SEs
-- `R/lowlevel_regression.R`: Core regression functions (`fit_lm_lowlevel`, `fit_probit_lowlevel`, `fit_cox_lowlevel`)
+- `R/lowlevel_regression.R`: Core regression functions (`fit_lm`, `fit_probit`)
 - `R/preprocess.R`: Data preprocessing and validation
 - `R/predict.R`: Prediction methods for `hapr_fit` objects
 - `R/simulate.R`: Simulates data with both G_c and G_f
@@ -52,14 +51,12 @@ Model-specific conversion formulas are in `calculate_parameters()` and `calculat
 - **Normalization**: `G_c` must be normalized (unit variance) - checked in preprocessing
 - **Coefficient naming**: Uses "gc" for current PRS, "gf" for future PRS in coefficient vectors
 - **Delta method**: Standard errors computed via analytical Jacobian (see `calculate_analytical_jacobian`)
-- **Cox special case**: First stage doesn't have intercept in gamma (theta has intercept separately)
 - **Testing**: Uses `testthat` - see `tests/testthat/` directory
 
 ## Theory References
 
 - Linear model: Section 5.1 in `dev/theory.tex`
 - Probit model: Section 5.2 (formulas from @azevedo2024genetic)
-- Cox model: Section 5.4 (partial likelihood approach)
 - General theory: Sections 1-4 (model assumptions, identification, likelihood)
 
 ## Common Tasks

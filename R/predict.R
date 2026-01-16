@@ -3,15 +3,15 @@
 #' @description
 #' This function generates predictions using a fitted `hapr_fit` object.
 #' It computes predictions based on specified covariates, supporting
-#' linear (`lm`), `probit`, and `cox` regression.
+#' linear (`lm`) and `probit` regression.
 #'
 #' @param object An object of class `hapr_fit`, containing fitted regression models.
 #' @param newdata A data frame with new observations for prediction.
 #' @param covariates A character vector specifying which covariates to use for prediction.
 #'        Defaults to `c('w', 'gc_w', 'gf_w')`: just covariates w, or combine them with gc or gf.
 #' @param type A character string indicating the type of prediction.
-#'        - For `lm`/`probit`, defaults to `"response"`.
-#'        - For `cox`, can be `"lp"` (linear predictor) or `"response"`/`"risk"` (exp of linear predictor).
+#'        - For `lm`, defaults to `"response"`.
+#'        - For `probit`, can be `"response"` or `"link"` (linear predictor).
 #' @param ... Additional arguments (currently ignored).
 #' @return A data frame with the same rows as `newdata`, plus columns for predictions.
 #'
@@ -20,8 +20,8 @@
 predict.hapr_fit <- function(object, newdata, covariates = c("w", "gc_w", "gf_w"), type = "response", ...) {
   fit <- object
   # Validate model type
-  if (!fit$model_type %in% c("lm", "probit", "cox")) {
-    stop("Model type must be 'lm', 'probit', or 'cox'.")
+  if (!fit$model_type %in% c("lm", "probit")) {
+    stop("Model type must be 'lm' or 'probit'.")
   }
 
   # Prepare an output data frame
@@ -83,15 +83,7 @@ predict.hapr_fit <- function(object, newdata, covariates = c("w", "gc_w", "gf_w"
     Xbeta <- as.vector(X_sub %*% coefs_sub)
 
     # Determine what to return based on model type and prediction type
-    if (fit$model_type == "cox") {
-      if (type == "lp") {
-        results[[paste0("y_hat_", cov)]] <- Xbeta
-      } else if (type %in% c("response", "risk")) {
-        results[[paste0("y_hat_", cov)]] <- exp(Xbeta)
-      } else {
-        stop("For Cox models, `type` must be 'lp', 'response', or 'risk'.")
-      }
-    } else if (fit$model_type == "lm") {
+    if (fit$model_type == "lm") {
       if (type != "response") {
         stop("For lm models, `type` must be 'response'.")
       }

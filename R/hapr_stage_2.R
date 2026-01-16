@@ -328,12 +328,3 @@ calculate_parameters <- function(model_type, coefficients, improvement_ratio) {
     posterior = posterior,
     beta = beta)
 }
-
-#' Helper to calculate a, b, c posterior parameters
-abc <- function(var_epsilon, var_v) {
-  var_total <- var_v + var_epsilon
-  a <- var_v / var_total
-  b <- var_epsilon / var_total
-  c_val <- sqrt(var_epsilon * var_v / var_total)
-  list(a = a, b = b, c = c_val)
-}
