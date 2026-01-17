@@ -12,9 +12,9 @@ source("dev/mock_dataset.R")
 set.seed(123)
 
 # Parameters for mock dataset
-n <- 100000
-var_v <- 0.25
-var_epsilon <- 0.5
+n <- 10000
+var_epsilon <- 0.9
+var_v <- (1 - var_epsilon) / 2
 beta_g <- 1.42  # Effect of future PRS (gf) on outcome
 beta_w <- c(0.1, 0.17, 0.27, -0.27)  # Intercept + 3 covariate effects
 theta <- c(0.0, 0.1, -0.2, 0.3)  # Intercept + 3 covariate effects for gc ~ w
