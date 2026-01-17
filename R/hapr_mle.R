@@ -142,7 +142,7 @@ hapr_mle <- function(
     }
     -ll
   }
-
+  
   opt <- stats::optim(
     par = start_params,
     fn = neg_loglik,

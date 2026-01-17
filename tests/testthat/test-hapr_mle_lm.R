@@ -58,8 +58,9 @@ test_that("hapr_mle matches two-stage estimates for linear model", {
         )
       })
 
-      start_beta <- second_stage$parameters$beta
-      start_delta <- c(log_sigma = log(sqrt(second_stage$parameters$var_eta)))
+      n_params <- ncol(data$w) + 2
+      start_beta <- rep(0, n_params)
+      start_delta <- c(log_sigma = 0.0)
 
       mle_time <- system.time({
         mle_fit <- hapr_mle(
