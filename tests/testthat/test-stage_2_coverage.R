@@ -42,7 +42,7 @@ test_that("Coverage intervals are above 85% for all scenarios", {
   N_SIMULATIONS <- 100
   
   # Create directory for artifacts if it doesn't exist
-  artifact_dir <- file.path("tests", "testthat", "_snaps", "coverage")
+  artifact_dir <- testthat::test_path("_artifacts", "coverage")
   if (!dir.exists(artifact_dir)) {
     dir.create(artifact_dir, recursive = TRUE)
   }

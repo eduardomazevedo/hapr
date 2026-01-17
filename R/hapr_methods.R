@@ -24,11 +24,15 @@ print.hapr_first_stage_fit <- function(x, ...) {
   cat("\n")
   
   cat("Gamma coefficients (y ~ gc + w):\n")
-  gamma_to_show <- x$parameters$gamma[1:min(5, length(x$parameters$gamma))]
-  coef_table <- data.frame(Estimate = gamma_to_show, row.names = names(gamma_to_show))
-  print(coef_table, digits = 4)
-  if (length(x$parameters$gamma) > 5) {
-    cat("  Showing first 5 of", length(x$parameters$gamma), "coefficients\n")
+  if (!is.null(x$parameters$gamma)) {
+    gamma_to_show <- x$parameters$gamma[1:min(5, length(x$parameters$gamma))]
+    coef_table <- data.frame(Estimate = gamma_to_show, row.names = names(gamma_to_show))
+    print(coef_table, digits = 4)
+    if (length(x$parameters$gamma) > 5) {
+      cat("  Showing first 5 of", length(x$parameters$gamma), "coefficients\n")
+    }
+  } else {
+    cat("  (not estimated for model_type = 'mle')\n")
   }
   cat("\n")
   

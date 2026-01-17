@@ -33,7 +33,7 @@ test_that("Point estimates are within 3 SE of true coefficients for all scenario
   
   # Create directory for artifacts if it doesn't exist
   # Note: testthat runs from project root, so paths are relative to that
-  artifact_dir <- file.path("tests", "testthat", "_snaps", "point_estimates")
+  artifact_dir <- testthat::test_path("_artifacts", "point_estimates")
   if (!dir.exists(artifact_dir)) {
     dir.create(artifact_dir, recursive = TRUE)
   }
@@ -84,17 +84,20 @@ test_that("Point estimates are within 3 SE of true coefficients for all scenario
         y <- data$y
         
         # Run hapr stages
-        first_stage_fit <- hapr_first_stage(
-          y = y,
-          gc = gc,
-          w = w,
-          model_type = model_type
-        )
-        
-        second_stage_fit <- hapr_second_stage(
-          first_stage = first_stage_fit,
-          improvement_ratio = improvement_ratio
-        )
+        two_stage_time <- system.time({
+          first_stage_fit <- hapr_first_stage(
+            y = y,
+            gc = gc,
+            w = w,
+            model_type = model_type
+          )
+          
+          second_stage_fit <- hapr_second_stage(
+            first_stage = first_stage_fit,
+            improvement_ratio = improvement_ratio
+          )
+        })
+        runtime_two_stage_ms <- two_stage_time[["elapsed"]] * 1000
         
         # Extract estimates and standard errors
         ci_beta <- second_stage_fit$ci_beta
@@ -130,6 +133,7 @@ test_that("Point estimates are within 3 SE of true coefficients for all scenario
           Upper_CI = upper_ci_ordered,
           Difference = differences,
           Within_3SE = within_3se,
+          Runtime_Two_Stage_ms = rep(runtime_two_stage_ms, length(true_coef)),
           row.names = NULL,
           stringsAsFactors = FALSE
         )

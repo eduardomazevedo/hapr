@@ -6,6 +6,7 @@
 #' @details
 #' This returns a first stage fit, which does not need to assume an improvement ratio. Run
 #' hapr_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
+#' For model_type "mle", only the gc ~ w regression is run.
 #' 
 #' **Coefficient Ordering:**
 #' The coefficients are returned in a specific order that stage 2 relies on:
@@ -16,28 +17,14 @@
 #' @param y Outcome variable. For "lm": numeric vector. For "probit": logical vector.
 #' @param gc Polygenic risk score (numeric vector, will be normalized)
 #' @param w Control variables (numeric matrix, must not include constant or linearly dependent columns)
-#' @param model_type "lm" or "probit"
+#' @param model_type "lm", "probit", or "mle"
 #'
 #' @return A hapr_first_stage_fit object containing the results of the first stage.
 #' @export
 hapr_first_stage <- function(y, gc, w, model_type) {
   # Validate model_type
-  if (!model_type %in% c("lm", "probit")) {
-    stop("model_type must be one of: 'lm', 'probit'")
-  }
-  
-  # Validate y based on model_type
-  if (model_type == "lm") {
-    if (!is.numeric(y)) {
-      stop("For 'lm' model_type, y must be numeric")
-    }
-    y <- as.numeric(y)
-  } else if (model_type == "probit") {
-    if (!is.logical(y)) {
-      stop("For 'probit' model_type, y must be a logical vector")
-    }
-    # Convert logical to numeric for glm.fit (0/1)
-    y <- as.numeric(y)
+  if (!model_type %in% c("lm", "probit", "mle")) {
+    stop("model_type must be one of: 'lm', 'probit', 'mle'")
   }
   
   # Validate gc
@@ -57,10 +44,6 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     stop("w must be a numeric matrix")
   }
   
-  # Check for missing values
-  if (any(is.na(y))) {
-    stop("y contains missing values")
-  }
   if (any(is.na(gc))) {
     stop("gc contains missing values")
   }
@@ -69,9 +52,36 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   }
   
   # Check dimensions
-  n <- length(y)
-  if (length(gc) != n || nrow(w) != n) {
-    stop("y, gc, and w must have the same number of observations")
+  n <- length(gc)
+  if (nrow(w) != n) {
+    stop("gc and w must have the same number of observations")
+  }
+  
+  # Validate y based on model_type
+  if (model_type == "lm") {
+    if (!is.numeric(y)) {
+      stop("For 'lm' model_type, y must be numeric")
+    }
+    y <- as.numeric(y)
+  } else if (model_type == "probit") {
+    if (!is.logical(y)) {
+      stop("For 'probit' model_type, y must be a logical vector")
+    }
+    # Convert logical to numeric for glm.fit (0/1)
+    y <- as.numeric(y)
+  } else {
+    if (!missing(y) && length(y) != n) {
+      stop("y, gc, and w must have the same number of observations")
+    }
+  }
+  
+  if (model_type != "mle") {
+    if (length(y) != n) {
+      stop("y, gc, and w must have the same number of observations")
+    }
+    if (any(is.na(y))) {
+      stop("y contains missing values")
+    }
   }
   
   # Check for constant columns in w
@@ -101,45 +111,67 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     X_with_int
   }
   
-  # Define regression function by model type
-  if (model_type == "lm") {
-    regression_function <- function(X_mat) fit_lm(y, X_mat)
-  } else if (model_type == "probit") {
-    regression_function <- function(X_mat) fit_probit(y, X_mat)
-  } else {
-    stop("Unsupported model_type: ", model_type)
-  }
-  
   # Run regressions using low-level functions
   # Create design matrices with named intercept column
   gc_on_w_X <- add_intercept(w)
-  y_on_w_X <- add_intercept(w)
-  y_on_gc_X <- add_intercept(gc)
-  y_on_gc_w_X <- cbind(gc, add_intercept(w))
-  colnames(y_on_gc_w_X)[1] <- "gc"
-  
-  regressions <- list(
-    gc_on_w = fit_lm(gc, gc_on_w_X),
-    y_on_w = regression_function(y_on_w_X),
-    y_on_gc = regression_function(y_on_gc_X),
-    y_on_gc_w = regression_function(y_on_gc_w_X)
-  )
+  if (model_type == "mle") {
+    regressions <- list(
+      gc_on_w = fit_lm(gc, gc_on_w_X)
+    )
+  } else {
+    # Define regression function by model type
+    if (model_type == "lm") {
+      regression_function <- function(X_mat) fit_lm(y, X_mat)
+    } else if (model_type == "probit") {
+      regression_function <- function(X_mat) fit_probit(y, X_mat)
+    } else {
+      stop("Unsupported model_type: ", model_type)
+    }
+    
+    y_on_w_X <- add_intercept(w)
+    y_on_gc_X <- add_intercept(gc)
+    y_on_gc_w_X <- cbind(gc, add_intercept(w))
+    colnames(y_on_gc_w_X)[1] <- "gc"
+    
+    regressions <- list(
+      gc_on_w = fit_lm(gc, gc_on_w_X),
+      y_on_w = regression_function(y_on_w_X),
+      y_on_gc = regression_function(y_on_gc_X),
+      y_on_gc_w = regression_function(y_on_gc_w_X)
+    )
+  }
   
   # Extract coefficients
-  parameters <- list(
-    theta = regressions$gc_on_w$coefficients,
-    var_v_plus_var_epsilon = regressions$gc_on_w$sigma_squared,
-    gamma = regressions$y_on_gc_w$coefficients
-  )
+  if (model_type == "mle") {
+    parameters <- list(
+      theta = regressions$gc_on_w$coefficients,
+      var_v_plus_var_epsilon = regressions$gc_on_w$sigma_squared,
+      gamma = NULL
+    )
+  } else {
+    parameters <- list(
+      theta = regressions$gc_on_w$coefficients,
+      var_v_plus_var_epsilon = regressions$gc_on_w$sigma_squared,
+      gamma = regressions$y_on_gc_w$coefficients
+    )
+  }
 
   # Extract vcov of var_v_plus_var_epsilon (now returned directly from fit_lm)
   v_cov_var_v_plus_var_epsilon <- regressions$gc_on_w$var_sigma_squared
 
-  vcov_parameters <- list(
-    theta = regressions$gc_on_w$vcov_coefficients,
-    var_v_plus_var_epsilon = v_cov_var_v_plus_var_epsilon,
-    gamma = regressions$y_on_gc_w$vcov_coefficients
-  )
+  if (model_type == "mle") {
+    vcov_parameters <- list(
+      theta = regressions$gc_on_w$vcov_coefficients,
+      var_v_plus_var_epsilon = v_cov_var_v_plus_var_epsilon,
+      gamma = NULL
+    )
+  } else {
+    vcov_parameters <- list(
+      theta = regressions$gc_on_w$vcov_coefficients,
+      var_v_plus_var_epsilon = v_cov_var_v_plus_var_epsilon,
+      gamma = regressions$y_on_gc_w$vcov_coefficients
+    )
+  }
   
   # Calculate explained variance (variance of fitted values) for var_wtheta
   # For gc_on_w: explained_variance = r2 * var(gc)
@@ -162,7 +194,8 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     regressions = regressions,
     parameters = parameters,
     vcov_parameters = vcov_parameters,
-    stats = stats
+    stats = stats,
+    preprocessed = list(y = y, gc = gc, w = w)
   )
   class(result) <- "hapr_first_stage_fit"
   result

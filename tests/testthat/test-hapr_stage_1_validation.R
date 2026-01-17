@@ -111,19 +111,19 @@ test_that("hapr_first_stage rejects mismatched dimensions", {
   # Test mismatched y length
   expect_error(
     hapr_first_stage(y = y[1:(n-1)], gc = gc, w = w, model_type = "lm"),
-    "y, gc, and w must have the same number of observations"
+    "same number of observations"
   )
   
   # Test mismatched gc length
   expect_error(
     hapr_first_stage(y = y, gc = gc[1:(n-1)], w = w, model_type = "lm"),
-    "y, gc, and w must have the same number of observations"
+    "same number of observations"
   )
   
   # Test mismatched w rows
   expect_error(
     hapr_first_stage(y = y, gc = gc, w = w[1:(n-1), , drop = FALSE], model_type = "lm"),
-    "y, gc, and w must have the same number of observations"
+    "same number of observations"
   )
 })
 

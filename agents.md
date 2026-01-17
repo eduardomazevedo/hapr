@@ -48,10 +48,13 @@ Model-specific conversion formulas are in `calculate_parameters()` and `calculat
 ## Development Notes
 
 - **Working directory**: All scripts and commands are run from the project root directory
+- **Assumption**: Always run commands from the project root; tests and scripts assume root paths
 - **Normalization**: `G_c` must be normalized (unit variance) - checked in preprocessing
 - **Coefficient naming**: Uses "gc" for current PRS, "gf" for future PRS in coefficient vectors
 - **Delta method**: Standard errors computed via analytical Jacobian (see `calculate_analytical_jacobian`)
 - **Testing**: Uses `testthat` - see `tests/testthat/` directory
+- **Local test runs**: Prefer `devtools::test()` to ensure local sources are loaded
+- **Test artifacts**: Write generated outputs to `tests/testthat/_artifacts` using `testthat::test_path()`
 
 ## Theory References
 
