@@ -7,9 +7,9 @@
 hapr_simulate(object, w, gc = NULL, repetitions = 1)
 }
 \arguments{
-\item{object}{A hapr_fit object from hapr() or hapr_second_stage()}
+\item{object}{A hapr_fit or hapr_mle_fit object}
 
-\item{w}{A data frame of control variables/covariates}
+\item{w}{A data frame or numeric matrix of control variables/covariates}
 
 \item{gc}{Optional vector of polygenic risk scores. If NULL, they will be simulated
 based on the parameters in the model}

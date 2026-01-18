@@ -13,6 +13,7 @@ Suggests:
     ggplot2,
     knitr,
     rmarkdown,
+    survival,
     tidyverse,
     devtools,
     testthat (>= 3.0.0)

@@ -4,8 +4,8 @@
 #' This function simulates data from a fitted HAPR model. It generates genetic scores
 #' and outcomes based on the model parameters estimated in the hapr_fit object.
 #'
-#' @param object A hapr_fit object from hapr() or hapr_second_stage()
-#' @param w A data frame of control variables/covariates
+#' @param object A hapr_fit or hapr_mle_fit object
+#' @param w A data frame or numeric matrix of control variables/covariates
 #' @param gc Optional vector of polygenic risk scores. If NULL, they will be simulated
 #'        based on the parameters in the model
 #' @param repetitions Number of times to repeat each row in w
@@ -39,13 +39,9 @@
 #' @seealso \code{\link{hapr}}, \code{\link{hapr_first_stage}}, \code{\link{hapr_second_stage}}
 #' @export
 hapr_simulate <- function(object, w, gc = NULL, repetitions = 1) {
-  # Check if w is a data frame
-  if (!is.data.frame(w)) {
-    stop("The 'w' parameter must be a data frame.")
-  }
-  # Check that object is a hapr_fit
-  if (!inherits(object, "hapr_fit")) {
-    stop("The 'object' parameter must be a hapr_fit object.")
+  # Check that object is a hapr_fit or hapr_mle_fit
+  if (!inherits(object, c("hapr_fit", "hapr_mle_fit"))) {
+    stop("The 'object' parameter must be a hapr_fit or hapr_mle_fit object.")
   }
   # If gc is provided and repetitions is greater than 1, throw an error
   if (!is.null(gc) && repetitions > 1) {
@@ -53,9 +49,18 @@ hapr_simulate <- function(object, w, gc = NULL, repetitions = 1) {
   }
 
   fit <- object
+  if (is.matrix(w)) {
+    w_mat <- w
+    if (!is.numeric(w_mat)) {
+      stop("The 'w' matrix must be numeric.")
+    }
+    w <- as.data.frame(w_mat)
+  } else if (!is.data.frame(w)) {
+    stop("The 'w' parameter must be a data frame or numeric matrix.")
+  }
+
   n <- nrow(w) * repetitions
   w <- as.data.frame(w[rep(seq_len(nrow(w)), repetitions), ])
-
   wtheta <- model.matrix(~., data = w) %*% fit$parameters$theta
 
   if (is.null(gc)) {

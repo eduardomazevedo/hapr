@@ -35,6 +35,7 @@ reference:
   - title: "S3 Methods"
     contents:
       - predict.hapr_fit
+      - predict.hapr_mle_fit
       - print.hapr_first_stage_fit
       - print.hapr_fit
       - print.hapr_mle_fit
