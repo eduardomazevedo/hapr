@@ -1,16 +1,18 @@
-#' HAPR maximum likelihood estimation for exponential survival
+#' HAPR maximum likelihood estimation for survival models
 #'
 #' @description
-#' Fits the HAPR exponential survival model by maximum likelihood using
-#' Gauss-Hermite quadrature.
+#' Fits the HAPR parametric survival models by maximum likelihood using
+#' Gauss-Hermite quadrature. Supported models are exponential and Weibull.
 #'
 #' @param event_time Event or censoring time (numeric vector)
 #' @param event_status Event indicator (0/1 or logical)
 #' @param gc Current PRS vector (will be normalized)
 #' @param w Covariate matrix (no intercept column)
 #' @param improvement_ratio R-squared improvement ratio (required)
+#' @param model_type One of "exponential" or "weibull"
 #' @param start_beta Named numeric vector for beta parameters (gf, (Intercept), w1, ...)
-#' @param start_delta Named numeric vector for additional parameters (optional; must be empty)
+#' @param start_delta Named numeric vector for additional parameters (optional);
+#'   for Weibull this should contain log_k.
 #' @param control List passed to stats::optim
 #'
 #' @return A hapr_mle_fit object with MLE estimates and diagnostics
@@ -21,9 +23,11 @@ hapr_mle_survival <- function(
     gc,
     w,
     improvement_ratio,
+    model_type = "exponential",
     start_beta,
     start_delta = NULL,
     control = list()) {
+  model_type <- match.arg(model_type, c("exponential", "weibull"))
   if (missing(improvement_ratio) || is.null(improvement_ratio)) {
     stop("improvement_ratio must be specified.")
   }
@@ -96,24 +100,33 @@ hapr_mle_survival <- function(
     if (!is.numeric(start_delta)) {
       stop("start_delta must be a numeric vector")
     }
-    if (length(start_delta) != 0) {
+    if (model_type == "exponential" && length(start_delta) != 0) {
       stop("start_delta must be empty for exponential survival.")
     }
+    if (model_type == "weibull" && length(start_delta) != 1) {
+      stop("start_delta must contain exactly one element (log_k).")
+    }
+  } else if (model_type == "weibull") {
+    start_delta <- c(log_k = 0)
   } else {
     start_delta <- numeric(0)
+  }
+  if (model_type == "weibull") {
+    names(start_delta) <- "log_k"
   }
 
   start_params <- c(start_beta, start_delta)
 
   X_w <- add_intercept(w)
   w_theta <- c(X_w %*% theta_hat)
-  neg_loglik <- make_hapr_mle_likelihood_survival_exponential(
+  neg_loglik <- make_hapr_mle_likelihood_survival(
     event_time = event_time,
     event_status = event_status,
     gc = gc,
     w_theta = w_theta,
     X_w = X_w,
-    posterior = posterior
+    posterior = posterior,
+    model_type = model_type
   )
 
   opt <- stats::optim(
@@ -127,6 +140,12 @@ hapr_mle_survival <- function(
   mle_params <- opt$par
   beta_hat <- mle_params[seq_len(nb)]
   names(beta_hat) <- beta_names
+  if (length(mle_params) > nb) {
+    delta_hat <- mle_params[(nb + 1):length(mle_params)]
+    names(delta_hat) <- names(start_delta)
+  } else {
+    delta_hat <- numeric(0)
+  }
 
   vcov_all <- NULL
   standard_errors <- NULL
@@ -140,11 +159,11 @@ hapr_mle_survival <- function(
   }
 
   result <- list(
-    model_type = "mle_survival_exponential",
+    model_type = sprintf("mle_survival_%s", model_type),
     regressions = list(gc_on_w = first_stage$regressions$gc_on_w),
     parameters = list(
       beta = beta_hat,
-      delta = numeric(0),
+      delta = delta_hat,
       theta = theta_hat,
       var_v_plus_var_epsilon = var_v_plus_var_epsilon
     ),
@@ -165,13 +184,14 @@ hapr_mle_survival <- function(
   result
 }
 
-make_hapr_mle_likelihood_survival_exponential <- function(
+make_hapr_mle_likelihood_survival <- function(
     event_time,
     event_status,
     gc,
     w_theta,
     X_w,
-    posterior) {
+    posterior,
+    model_type) {
   avg_linpred <- posterior$a * gc + posterior$b * w_theta
   event_idx <- which(event_status == 1)
   censor_idx <- which(event_status == 0)
@@ -190,8 +210,9 @@ make_hapr_mle_likelihood_survival_exponential <- function(
   if (length(censor_idx) == 0) {
     X_w_censor <- X_w[0, , drop = FALSE]
   }
+  model_id <- if (model_type == "exponential") 0L else 1L
   function(params) {
-    hapr_mle_survival_exp_nll_split_cpp(
+    hapr_mle_survival_nll_split_cpp(
       params = params,
       event_time = event_time_event,
       avg_linpred_event = avg_event,
@@ -199,7 +220,8 @@ make_hapr_mle_likelihood_survival_exponential <- function(
       censor_time = censor_time,
       avg_linpred_censor = avg_censor,
       X_w_censor = X_w_censor,
-      post_c = posterior$c
+      post_c = posterior$c,
+      model_type = model_id
     )
   }
 }

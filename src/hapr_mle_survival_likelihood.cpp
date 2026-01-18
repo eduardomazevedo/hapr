@@ -92,14 +92,15 @@ double hapr_mle_survival_exp_nll_cpp(const arma::vec& params,
 }
 
 // [[Rcpp::export]]
-double hapr_mle_survival_exp_nll_split_cpp(const arma::vec& params,
-                                           const arma::vec& event_time,
-                                           const arma::vec& avg_linpred_event,
-                                           const arma::mat& X_w_event,
-                                           const arma::vec& censor_time,
-                                           const arma::vec& avg_linpred_censor,
-                                           const arma::mat& X_w_censor,
-                                           double post_c) {
+double hapr_mle_survival_nll_split_cpp(const arma::vec& params,
+                                       const arma::vec& event_time,
+                                       const arma::vec& avg_linpred_event,
+                                       const arma::mat& X_w_event,
+                                       const arma::vec& censor_time,
+                                       const arma::vec& avg_linpred_censor,
+                                       const arma::mat& X_w_censor,
+                                       double post_c,
+                                       int model_type) {
   auto log_exp_density = [](double time, double linpred) {
     const double rate = std::exp(linpred);
     return linpred - rate * time;
@@ -108,12 +109,29 @@ double hapr_mle_survival_exp_nll_split_cpp(const arma::vec& params,
     const double rate = std::exp(linpred);
     return -rate * time;
   };
+  auto log_weibull_density = [](double time, double linpred, double log_k, double k) {
+    const double log_time = std::log(time);
+    const double log_scaled_time = log_time - linpred;
+    const double log_hazard = log_k - linpred + (k - 1.0) * log_scaled_time;
+    const double log_surv = -std::exp(k * log_scaled_time);
+    return log_hazard + log_surv;
+  };
+  auto log_weibull_tail_probability = [](double time, double linpred, double k) {
+    const double log_time = std::log(time);
+    const double log_scaled_time = log_time - linpred;
+    return -std::exp(k * log_scaled_time);
+  };
 
   const int n_event = event_time.n_elem;
   const int n_censor = censor_time.n_elem;
   const int n_cols = X_w_event.n_cols > 0 ? X_w_event.n_cols : X_w_censor.n_cols;
-  if (params.n_elem != static_cast<arma::uword>(n_cols + 1)) {
-    Rcpp::stop("params length must equal ncol(X_w) + 1.");
+  if (model_type != 0 && model_type != 1) {
+    Rcpp::stop("model_type must be 0 (exponential) or 1 (weibull).");
+  }
+  const bool is_weibull = model_type == 1;
+  const int expected_params = is_weibull ? (n_cols + 2) : (n_cols + 1);
+  if (params.n_elem != static_cast<arma::uword>(expected_params)) {
+    Rcpp::stop("params length does not match model_type.");
   }
   if ((X_w_event.n_cols != static_cast<arma::uword>(n_cols)) ||
       (X_w_censor.n_cols != static_cast<arma::uword>(n_cols))) {
@@ -130,6 +148,8 @@ double hapr_mle_survival_exp_nll_split_cpp(const arma::vec& params,
 
   const double beta_g = params[0];
   const arma::vec beta_w = params.subvec(1, n_cols);
+  const double log_k = is_weibull ? params[n_cols + 1] : 0.0;
+  const double k = is_weibull ? std::exp(log_k) : 1.0;
 
   const arma::vec xb_event = X_w_event * beta_w;
   const arma::vec xb_censor = X_w_censor * beta_w;
@@ -150,46 +170,90 @@ double hapr_mle_survival_exp_nll_split_cpp(const arma::vec& params,
 
   double total_ll = 0.0;
 
-  for (int i = 0; i < n_event; ++i) {
-    const double base = beta_g * avg_event_ptr[i] + xb_event_ptr[i];
-    double max_val = -1.0e300;
-    double sum_exp = 0.0;
+  if (!is_weibull) {
+    for (int i = 0; i < n_event; ++i) {
+      const double base = beta_g * avg_event_ptr[i] + xb_event_ptr[i];
+      double max_val = -1.0e300;
+      double sum_exp = 0.0;
 
-    for (int j = 0; j < kNumNodes; ++j) {
-      const double linpred = base + node_adj[j];
-      const double val = log_exp_density(time_event_ptr[i], linpred) +
-        kLogWeights[j];
+      for (int j = 0; j < kNumNodes; ++j) {
+        const double linpred = base + node_adj[j];
+        const double val = log_exp_density(time_event_ptr[i], linpred) +
+          kLogWeights[j];
 
-      if (val > max_val) {
-        sum_exp = sum_exp * std::exp(max_val - val) + 1.0;
-        max_val = val;
-      } else {
-        sum_exp += std::exp(val - max_val);
+        if (val > max_val) {
+          sum_exp = sum_exp * std::exp(max_val - val) + 1.0;
+          max_val = val;
+        } else {
+          sum_exp += std::exp(val - max_val);
+        }
       }
+
+      total_ll += max_val + std::log(sum_exp);
     }
 
-    total_ll += max_val + std::log(sum_exp);
-  }
+    for (int i = 0; i < n_censor; ++i) {
+      const double base = beta_g * avg_censor_ptr[i] + xb_censor_ptr[i];
+      double max_val = -1.0e300;
+      double sum_exp = 0.0;
 
-  for (int i = 0; i < n_censor; ++i) {
-    const double base = beta_g * avg_censor_ptr[i] + xb_censor_ptr[i];
-    double max_val = -1.0e300;
-    double sum_exp = 0.0;
+      for (int j = 0; j < kNumNodes; ++j) {
+        const double linpred = base + node_adj[j];
+        const double val = log_exp_tail_probability(time_censor_ptr[i], linpred) +
+          kLogWeights[j];
 
-    for (int j = 0; j < kNumNodes; ++j) {
-      const double linpred = base + node_adj[j];
-      const double val = log_exp_tail_probability(time_censor_ptr[i], linpred) +
-        kLogWeights[j];
-
-      if (val > max_val) {
-        sum_exp = sum_exp * std::exp(max_val - val) + 1.0;
-        max_val = val;
-      } else {
-        sum_exp += std::exp(val - max_val);
+        if (val > max_val) {
+          sum_exp = sum_exp * std::exp(max_val - val) + 1.0;
+          max_val = val;
+        } else {
+          sum_exp += std::exp(val - max_val);
+        }
       }
+
+      total_ll += max_val + std::log(sum_exp);
+    }
+  } else {
+    for (int i = 0; i < n_event; ++i) {
+      const double base = beta_g * avg_event_ptr[i] + xb_event_ptr[i];
+      double max_val = -1.0e300;
+      double sum_exp = 0.0;
+
+      for (int j = 0; j < kNumNodes; ++j) {
+        const double linpred = base + node_adj[j];
+        const double val = log_weibull_density(time_event_ptr[i], linpred, log_k, k) +
+          kLogWeights[j];
+
+        if (val > max_val) {
+          sum_exp = sum_exp * std::exp(max_val - val) + 1.0;
+          max_val = val;
+        } else {
+          sum_exp += std::exp(val - max_val);
+        }
+      }
+
+      total_ll += max_val + std::log(sum_exp);
     }
 
-    total_ll += max_val + std::log(sum_exp);
+    for (int i = 0; i < n_censor; ++i) {
+      const double base = beta_g * avg_censor_ptr[i] + xb_censor_ptr[i];
+      double max_val = -1.0e300;
+      double sum_exp = 0.0;
+
+      for (int j = 0; j < kNumNodes; ++j) {
+        const double linpred = base + node_adj[j];
+        const double val = log_weibull_tail_probability(time_censor_ptr[i], linpred, k) +
+          kLogWeights[j];
+
+        if (val > max_val) {
+          sum_exp = sum_exp * std::exp(max_val - val) + 1.0;
+          max_val = val;
+        } else {
+          sum_exp += std::exp(val - max_val);
+        }
+      }
+
+      total_ll += max_val + std::log(sum_exp);
+    }
   }
 
   if (!R_finite(total_ll)) {
