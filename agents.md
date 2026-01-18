@@ -55,6 +55,7 @@ Model-specific conversion formulas are in `calculate_parameters()` and `calculat
 - **Assumption**: Always run commands from the project root; tests and scripts assume root paths
 - **Normalization**: `G_c` must be normalized (unit variance) - checked in preprocessing
 - **Coefficient naming**: Uses "gc" for current PRS, "gf" for future PRS in coefficient vectors
+- **Parameter ordering**: Prefer strict ordering when mapping estimates to vcov blocks (avoid name-based matching).
 - **Delta method**: Standard errors computed via analytical Jacobian (see `calculate_analytical_jacobian`)
 - **Testing**: Uses `testthat` - see `tests/testthat/` directory
 - **Local test runs**: Prefer `devtools::test()` to ensure local sources are loaded

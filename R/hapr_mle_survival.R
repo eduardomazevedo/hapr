@@ -179,7 +179,11 @@ hapr_mle_survival <- function(
       var_v_plus_var_epsilon = var_v_plus_var_epsilon
     ),
     vcov_parameters = list(
-      all = vcov_all
+      all = vcov_all,
+      order = list(
+        beta = seq_len(nb),
+        delta = if (length(mle_params) > nb) (nb + 1):length(mle_params) else integer(0)
+      )
     ),
     standard_errors = standard_errors,
     ci_beta = ci_beta,

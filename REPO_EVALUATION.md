@@ -21,10 +21,8 @@ This review focuses on correctness, consistency, maintainability, and performanc
 - **Impact**: Harder to program against MLE results in downstream code or compare across models.
 - **Suggestion**: Document a standard convention for `parameters$delta` per model in code comments and docs (e.g., `log_sigma` for LM, `log_k` for Weibull). Optionally add a `delta_names` field or `delta_meaning` in result.
 
-### 3) Stage‑1 and MLE print code depends on vcov naming
-- **Issue**: MLE SE/CI printing relies on vcov dimnames. This was fixed for MLE by setting dimnames, but the pattern is fragile if optimizer returns unnamed params or users change `start_beta` names.
-- **Impact**: Missing or mis‑aligned CI tables in prints.
-- **Suggestion**: Enforce param naming prior to optimization and add a small internal validator to assert names line up (or set names on `opt$par` explicitly before Hessian inversion).
+### 3) Stage‑1 and MLE print code depends on vcov naming (resolved)
+- **Status**: MLE print extraction now uses strict parameter ordering indices (not names) to align estimates and vcov blocks. This removes dependence on vcov dimnames or user‑supplied names.
 
 ### 4) Potential mismatch in survival Weibull formulation
 - **Issue**: Weibull model uses `scale = exp(linpred)` and shape `k = exp(log_k)`. The chosen log‑pdf/log‑survival formulas should be validated against the stated parameterization in `dev/theory.tex`.

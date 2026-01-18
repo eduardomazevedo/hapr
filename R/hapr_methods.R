@@ -76,14 +76,11 @@ extract_se <- function(estimates, vcov) {
   se
 }
 
-subset_vcov <- function(vcov, names_subset) {
-  if (is.null(vcov) || !is.matrix(vcov)) {
+subset_vcov <- function(vcov, idx) {
+  if (is.null(vcov) || !is.matrix(vcov) || length(idx) == 0) {
     return(NULL)
   }
-  if (is.null(dimnames(vcov))) {
-    return(NULL)
-  }
-  vcov[names_subset, names_subset, drop = FALSE]
+  vcov[idx, idx, drop = FALSE]
 }
 
 print_ci_table <- function(title, estimates, vcov, max_show = 5) {
@@ -185,7 +182,11 @@ print.hapr_mle_fit <- function(x, ...) {
 
   cat("Model type:", x$model_type, "\n\n")
 
-  vcov_beta <- subset_vcov(x$vcov_parameters$all, names(x$parameters$beta))
+  order_beta <- x$vcov_parameters$order$beta
+  if (is.null(order_beta)) {
+    order_beta <- seq_along(x$parameters$beta)
+  }
+  vcov_beta <- subset_vcov(x$vcov_parameters$all, order_beta)
   if (!is.null(vcov_beta)) {
     print_ci_table("Beta coefficients:", x$parameters$beta, vcov_beta)
     cat("Note: MLE standard errors ignore first-stage uncertainty.\n\n")
@@ -198,7 +199,11 @@ print.hapr_mle_fit <- function(x, ...) {
   }
 
   if (length(x$parameters$delta) > 0) {
-    vcov_delta <- subset_vcov(x$vcov_parameters$all, names(x$parameters$delta))
+    order_delta <- x$vcov_parameters$order$delta
+    if (is.null(order_delta)) {
+      order_delta <- seq_along(x$parameters$delta)
+    }
+    vcov_delta <- subset_vcov(x$vcov_parameters$all, order_delta)
     if (!is.null(vcov_delta)) {
       print_ci_table("Delta parameters:", x$parameters$delta, vcov_delta)
     } else {
