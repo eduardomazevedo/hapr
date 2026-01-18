@@ -173,13 +173,32 @@ make_hapr_mle_likelihood_survival_exponential <- function(
     X_w,
     posterior) {
   avg_linpred <- posterior$a * gc + posterior$b * w_theta
+  event_idx <- which(event_status == 1)
+  censor_idx <- which(event_status == 0)
+
+  event_time_event <- event_time[event_idx]
+  avg_event <- avg_linpred[event_idx]
+  X_w_event <- X_w[event_idx, , drop = FALSE]
+
+  censor_time <- event_time[censor_idx]
+  avg_censor <- avg_linpred[censor_idx]
+  X_w_censor <- X_w[censor_idx, , drop = FALSE]
+
+  if (length(event_idx) == 0) {
+    X_w_event <- X_w[0, , drop = FALSE]
+  }
+  if (length(censor_idx) == 0) {
+    X_w_censor <- X_w[0, , drop = FALSE]
+  }
   function(params) {
-    hapr_mle_survival_exp_nll_cpp(
+    hapr_mle_survival_exp_nll_split_cpp(
       params = params,
-      event_time = event_time,
-      event_status = event_status,
-      avg_linpred = avg_linpred,
-      X_w = X_w,
+      event_time = event_time_event,
+      avg_linpred_event = avg_event,
+      X_w_event = X_w_event,
+      censor_time = censor_time,
+      avg_linpred_censor = avg_censor,
+      X_w_censor = X_w_censor,
       post_c = posterior$c
     )
   }

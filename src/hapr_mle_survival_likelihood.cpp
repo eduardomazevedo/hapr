@@ -90,3 +90,110 @@ double hapr_mle_survival_exp_nll_cpp(const arma::vec& params,
   }
   return -total_ll;
 }
+
+// [[Rcpp::export]]
+double hapr_mle_survival_exp_nll_split_cpp(const arma::vec& params,
+                                           const arma::vec& event_time,
+                                           const arma::vec& avg_linpred_event,
+                                           const arma::mat& X_w_event,
+                                           const arma::vec& censor_time,
+                                           const arma::vec& avg_linpred_censor,
+                                           const arma::mat& X_w_censor,
+                                           double post_c) {
+  auto log_exp_density = [](double time, double linpred) {
+    const double rate = std::exp(linpred);
+    return linpred - rate * time;
+  };
+  auto log_exp_tail_probability = [](double time, double linpred) {
+    const double rate = std::exp(linpred);
+    return -rate * time;
+  };
+
+  const int n_event = event_time.n_elem;
+  const int n_censor = censor_time.n_elem;
+  const int n_cols = X_w_event.n_cols > 0 ? X_w_event.n_cols : X_w_censor.n_cols;
+  if (params.n_elem != static_cast<arma::uword>(n_cols + 1)) {
+    Rcpp::stop("params length must equal ncol(X_w) + 1.");
+  }
+  if ((X_w_event.n_cols != static_cast<arma::uword>(n_cols)) ||
+      (X_w_censor.n_cols != static_cast<arma::uword>(n_cols))) {
+    Rcpp::stop("Event/censor design matrices must have the same number of columns.");
+  }
+  if (avg_linpred_event.n_elem != static_cast<arma::uword>(n_event) ||
+      X_w_event.n_rows != static_cast<arma::uword>(n_event)) {
+    Rcpp::stop("Event input lengths are inconsistent.");
+  }
+  if (avg_linpred_censor.n_elem != static_cast<arma::uword>(n_censor) ||
+      X_w_censor.n_rows != static_cast<arma::uword>(n_censor)) {
+    Rcpp::stop("Censor input lengths are inconsistent.");
+  }
+
+  const double beta_g = params[0];
+  const arma::vec beta_w = params.subvec(1, n_cols);
+
+  const arma::vec xb_event = X_w_event * beta_w;
+  const arma::vec xb_censor = X_w_censor * beta_w;
+
+  double node_adj[kNumNodes];
+  const double term_c = beta_g * post_c;
+  for (int j = 0; j < kNumNodes; ++j) {
+    node_adj[j] = term_c * kNodes[j];
+  }
+
+  const double* time_event_ptr = event_time.memptr();
+  const double* avg_event_ptr = avg_linpred_event.memptr();
+  const double* xb_event_ptr = xb_event.memptr();
+
+  const double* time_censor_ptr = censor_time.memptr();
+  const double* avg_censor_ptr = avg_linpred_censor.memptr();
+  const double* xb_censor_ptr = xb_censor.memptr();
+
+  double total_ll = 0.0;
+
+  for (int i = 0; i < n_event; ++i) {
+    const double base = beta_g * avg_event_ptr[i] + xb_event_ptr[i];
+    double max_val = -1.0e300;
+    double sum_exp = 0.0;
+
+    for (int j = 0; j < kNumNodes; ++j) {
+      const double linpred = base + node_adj[j];
+      const double val = log_exp_density(time_event_ptr[i], linpred) +
+        kLogWeights[j];
+
+      if (val > max_val) {
+        sum_exp = sum_exp * std::exp(max_val - val) + 1.0;
+        max_val = val;
+      } else {
+        sum_exp += std::exp(val - max_val);
+      }
+    }
+
+    total_ll += max_val + std::log(sum_exp);
+  }
+
+  for (int i = 0; i < n_censor; ++i) {
+    const double base = beta_g * avg_censor_ptr[i] + xb_censor_ptr[i];
+    double max_val = -1.0e300;
+    double sum_exp = 0.0;
+
+    for (int j = 0; j < kNumNodes; ++j) {
+      const double linpred = base + node_adj[j];
+      const double val = log_exp_tail_probability(time_censor_ptr[i], linpred) +
+        kLogWeights[j];
+
+      if (val > max_val) {
+        sum_exp = sum_exp * std::exp(max_val - val) + 1.0;
+        max_val = val;
+      } else {
+        sum_exp += std::exp(val - max_val);
+      }
+    }
+
+    total_ll += max_val + std::log(sum_exp);
+  }
+
+  if (!R_finite(total_ll)) {
+    return 1.0e12;
+  }
+  return -total_ll;
+}
