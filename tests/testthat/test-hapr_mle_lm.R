@@ -4,7 +4,9 @@ test_that("hapr_mle matches two-stage estimates for linear model", {
   source(testthat::test_path("..", "..", "dev", "mock_dataset.R"))
 
   var_epsilon_values <- c(0.5, 0.6, 0.7, 0.8, 0.9)
-  n_values <- c(1e3, 1e4)
+  run_slow_env <- Sys.getenv("RUN_SLOW_TESTS", unset = "false")
+  run_slow <- tolower(run_slow_env) %in% c("true", "1", "yes")
+  n_values <- if (run_slow) c(1e3, 1e4, 1e5) else c(1e3, 1e4)
 
   beta_g <- 1.2
   beta_w <- c(0.2, -0.1, 0.3, -0.2)

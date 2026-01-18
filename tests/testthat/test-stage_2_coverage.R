@@ -5,13 +5,13 @@
 #' Produces artifact tables and histograms.
 #' 
 #' This test is slow and will only run if the environment variable
-#' HAPR_RUN_COVERAGE_TESTS is set to "true" or "TRUE".
+#' RUN_SLOW_TESTS is set to "true" or "TRUE".
 
 test_that("Coverage intervals are above 85% for all scenarios", {
   # Check if coverage tests should run
-  run_coverage <- Sys.getenv("HAPR_RUN_COVERAGE_TESTS", unset = "false")
-  if (!tolower(run_coverage) %in% c("true", "1", "yes")) {
-    skip("Coverage tests skipped. Set HAPR_RUN_COVERAGE_TESTS=true to run.")
+  run_slow <- Sys.getenv("RUN_SLOW_TESTS", unset = "false")
+  if (!tolower(run_slow) %in% c("true", "1", "yes")) {
+    skip("Coverage tests skipped. Set RUN_SLOW_TESTS=true to run.")
   }
   
   # Source mock dataset functions (using path relative to project root)

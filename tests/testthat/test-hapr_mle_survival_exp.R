@@ -23,7 +23,9 @@ test_that("Survival MLE point estimates are within 4 SE", {
   CENSOR_RATE <- 0.2
 
   VAR_EPSILON_VALUES <- c(0.5, 0.6, 0.7, 0.8, 0.9)
-  N_VALUES <- c(1e3, 1e4)
+  run_slow_env <- Sys.getenv("RUN_SLOW_TESTS", unset = "false")
+  run_slow <- tolower(run_slow_env) %in% c("true", "1", "yes")
+  N_VALUES <- if (run_slow) c(1e3, 1e4, 1e5) else c(1e3, 1e4)
   MODEL_TYPES <- c("exponential", "weibull")
   LOG_K_VALUES <- c(-1, 0, 1)
 
