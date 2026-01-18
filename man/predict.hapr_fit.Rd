@@ -15,7 +15,9 @@
 \arguments{
 \item{object}{An object of class \code{hapr_fit}, containing fitted regression models.}
 
-\item{newdata}{A data frame with new observations for prediction.}
+\item{newdata}{Either a numeric matrix of covariates \code{w}, or a list with
+elements \code{w} (numeric matrix), and optionally \code{gc} and \code{gf} vectors. The
+columns of \code{w} are renamed to \code{w1}, \code{w2}, ... to match \code{hapr()} behavior.}
 
 \item{covariates}{A character vector specifying which covariates to use for prediction.
 Defaults to \code{c('w', 'gc_w', 'gf_w')}: just covariates w, or combine them with gc or gf.}
@@ -32,5 +34,6 @@ A data frame with the same rows as \code{newdata}, plus columns for predictions.
 \description{
 This function generates predictions using a fitted \code{hapr_fit} object.
 It computes predictions based on specified covariates, supporting
-linear (\code{lm}) and \code{probit} regression.
+linear (\code{lm}) and \code{probit} regression. Predictions require numeric
+design matrices; no formula-based preprocessing is performed.
 }

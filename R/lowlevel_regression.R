@@ -13,6 +13,7 @@ NULL
 #' @param y Numeric response vector
 #' @param X Numeric matrix of predictors
 #' @return List of model statistics including coefficients, vcov_coefficients, sigma_squared, var_sigma_squared, r2
+#' @keywords internal
 fit_lm <- function(y, X) {
   # 2. Fit model using the fastest base function
   fit <- .lm.fit(X, y)
@@ -68,6 +69,7 @@ fit_lm <- function(y, X) {
 #' @param y Binary response vector (numeric 0/1 or logical, will be converted to numeric)
 #' @param X Numeric matrix of predictors (should include intercept column if needed)
 #' @return List of model statistics including coefficients, vcov_coefficients, r2
+#' @keywords internal
 fit_probit <- function(y, X) {
   
   # 1. Fit model using glm.fit (faster than glm, bypasses formula parsing)

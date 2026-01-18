@@ -10,7 +10,7 @@ Basic applications:
   - **Genomic social science**. Studies often estimate the effect of the true genetic predictor on a trait. Regressions using a currently available noisy polygenic risk score underestimate the true effect. HAPR estimates the true effect of the genetic predictor on the trait using current data combined with heritability estimates.
   - **Insurance economics**. Making genetic predictions available may change both pricing and consumer decisions in insurance markets. HAPR can be used to estimate the predictive power of both current polygenic risk scores and also how this power is expected to change as larger GWASs become available.
 
-HAPR models quantitative traits (like height) and binary traits (like disease occurrence). HAPR uses robust, simple estimators that are scalable to large datasets.
+HAPR supports two-stage estimators for quantitative traits (linear) and binary traits (probit). It also provides MLE estimators for linear models (development use) and parametric survival models (exponential, Weibull).
 
 ## Installation
 
@@ -45,12 +45,14 @@ head(heart_disease_data)
 
 # Define covariates
 covariates <- heart_disease_data |> select(prevent_score, gender)
+# HAPR expects w as a numeric matrix without an intercept column.
+w <- model.matrix(~ prevent_score + gender, data = covariates)[, -1, drop = FALSE]
 
 # Run HAPR analysis
 hapr_fit <- hapr(
   y = heart_disease_data$ascvd,          # Disease outcome
   gc = heart_disease_data$polygenic_score, # Current polygenic score
-  w = covariates,                        # Covariates
+  w = w,                                 # Covariates (numeric matrix, no intercept)
   model_type = "probit",                 # Binary outcome model
   improvement_ratio = 10                 # Ratio of future R² (0.2) to current R² (0.02)
 )
@@ -81,12 +83,14 @@ We can simulate what data would look like with the improved future polygenic sco
 # Simulate data with both current and future polygenic scores
 simulated_data <- hapr_simulate(hapr_fit, covariates)
 
-# Generate risk predictions
-risk_dataset <- predict(hapr_fit, simulated_data)
+# Build w in the same format used by hapr()
+w_pred <- model.matrix(~ prevent_score + gender, data = simulated_data)[, -1, drop = FALSE]
 
-# View the first few rows of predicted risk using either only covariates (w),
-# covariates and the current polygenic score and covariates (gc_w)
-# and risk using the future polygenic score and covariates (gf_w)
+risk_dataset <- predict(
+  hapr_fit,
+  list(w = w_pred, gc = simulated_data$gc, gf = simulated_data$gf)
+)
+
 head(risk_dataset)
 #>           gf         gc prevent_score gender    y_hat_w y_hat_gc_w  y_hat_gf_w
 #> 1 -0.2303620 -1.0964639    0.04275714 female 0.04831298 0.02639364 0.001877092
@@ -110,16 +114,9 @@ Implementation uses a two-stage estimation approach:
 
 2. Second stage (`hapr_second_stage`): Uses the improvement ratio to estimate the full model parameters
 
-This structure allows easy calculation of results under different heritability assumptions by varying the improvement ratio parameter in the second stage, without having to redo the first stage, which has the bulk of computations.
+This structure allows easy calculation of results under different heritability assumptions by varying the improvement ratio parameter in the second stage, without having to redo the first stage, which has the bulk of computations in the regression-based estimators.
 
 ## Current functionality
-- Implemented models: lm, probit.
-- Estimation (`hapr`), simulation (`hapr_simulate`), prediction (`predict`).
-
-## TODOs:
-- Implement standard errors with the delta method.
-- Create coverage tests.
-- Create more unit tests.
-- Better vignettes / readme.
-- General improvements.
-- Fix a bunch of little issues required to submit to CRAN.
+- Two-stage regression-based estimators: lm, probit.
+- Two-stage MLE estimators: survival (exponential, Weibull); lm (only for testing).
+- Estimation (`hapr`, `hapr_mle_survival`), simulation (`hapr_simulate`), prediction (`predict`).

@@ -1,6 +1,6 @@
 #' Test MLE estimator against two-stage linear model
 
-test_that("hapr_mle matches two-stage estimates for linear model", {
+test_that("hapr_mle_lm matches two-stage estimates for linear model", {
   var_epsilon_values <- c(0.5, 0.6, 0.7, 0.8, 0.9)
   run_slow_env <- Sys.getenv("RUN_SLOW_TESTS", unset = "false")
   run_slow <- tolower(run_slow_env) %in% c("true", "1", "yes")
@@ -58,12 +58,12 @@ test_that("hapr_mle matches two-stage estimates for linear model", {
       start_delta <- c(log_sigma = 0.0)
 
       mle_time <- system.time({
-      mle_fit <- hapr_mle(
-        y = data$y,
-        gc = data$gc,
-        w = data$w,
-        improvement_ratio = improvement_ratio,
-        start_beta = start_beta,
+        mle_fit <- hapr_mle_lm(
+          y = data$y,
+          gc = data$gc,
+          w = data$w,
+          improvement_ratio = improvement_ratio,
+          start_beta = start_beta,
         start_delta = start_delta,
         control = list(maxit = 150)
       )

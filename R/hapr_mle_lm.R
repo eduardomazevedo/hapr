@@ -1,4 +1,4 @@
-#' HAPR maximum likelihood estimation
+#' HAPR maximum likelihood estimation (linear, internal)
 #'
 #' @description
 #' Fits the HAPR linear model by maximum likelihood using Gauss-Hermite quadrature.
@@ -12,8 +12,8 @@
 #' @param control List passed to stats::optim
 #'
 #' @return A hapr_mle_fit object with MLE estimates and diagnostics
-#' @export
-hapr_mle <- function(
+#' @keywords internal
+hapr_mle_lm <- function(
     y,
     gc,
     w,

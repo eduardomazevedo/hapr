@@ -1,0 +1,92 @@
+---
+title: "HAPR Weibull survival MLE"
+output:
+  rmarkdown::html_vignette:
+    syntax_highlighting: none
+vignette: >
+  %\VignetteIndexEntry{HAPR Weibull survival MLE}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+library(hapr)
+library(tidyverse)
+
+set.seed(123)
+```
+
+In this vignette we use a parametric survival model with a Weibull baseline. We create a synthetic heart‑disease dataset with time‑to‑event outcomes and censoring. The outcome is a pair `(event_time, event_status)`, where `event_status = 1` indicates disease onset and `0` indicates censoring.
+
+```{r}
+n <- 1000
+
+# Covariates (panel-style data with time to disease)
+gender <- sample(c("male", "female"), n, replace = TRUE)
+prevent_score <- rbeta(n, 1, 12)
+
+covariates <- tibble(
+  prevent_score = prevent_score,
+  gender = factor(gender)
+)
+
+# Build w in the same format required by hapr()
+w <- model.matrix(~ prevent_score + gender, data = covariates)[, -1, drop = FALSE]
+
+# Latent genetic structure
+theta <- c(0.0, 0.1, -0.2)  # (Intercept), w1, w2
+var_v <- 0.15
+var_epsilon <- 0.70
+
+v <- rnorm(n, 0, sqrt(var_v))
+e <- rnorm(n, 0, sqrt(var_epsilon))
+
+w_with_int <- cbind(1, w)
+gf <- v + w_with_int %*% theta
+gc <- gf + e
+
+# Weibull survival model: scale = exp(linpred), shape k = exp(log_k)
+beta_g <- 0.6
+beta_w <- c(0.1, -0.2, 0.15)  # (Intercept), w1, w2
+log_k <- 0.0
+k <- exp(log_k)
+
+linpred <- beta_g * gf + w_with_int %*% beta_w
+scale <- exp(linpred)
+event_time <- scale * (-log(runif(n)))^(1 / k)
+
+# Add independent censoring
+censor_time <- rexp(n, rate = 0.2)
+event_status <- as.numeric(event_time <= censor_time)
+event_time <- pmin(event_time, censor_time)
+
+head(tibble(event_time, event_status, gc, prevent_score, gender))
+```
+
+We fit the Weibull survival model using the MLE estimator. The only model‑specific likelihood parameter is the shape `k`, which is optimized as `log_k`.
+
+```{r}
+improvement_ratio <- 1 / (1 - var_epsilon)
+start_beta <- rep(0, ncol(w) + 2)
+start_delta <- c(log_k = 0)
+
+mle_fit <- hapr_mle_survival(
+  event_time = event_time,
+  event_status = event_status,
+  gc = gc,
+  w = w,
+  improvement_ratio = improvement_ratio,
+  model_type = "weibull",
+  start_beta = start_beta,
+  start_delta = start_delta,
+  control = list(maxit = 150)
+)
+
+print(mle_fit)
+```
+
+Notes:
+
+- `w` must be a numeric matrix with no intercept column. The order must match the `w` used in the initial call.
+- `event_status` is numeric `0/1` (or logical). `event_time` must be non‑negative.
+- MLE standard errors ignore first‑stage uncertainty, so they are typically smaller than two‑stage standard errors.

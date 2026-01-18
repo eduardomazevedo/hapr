@@ -1,6 +1,8 @@
 ---
 title: "HAPR probit"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    syntax_highlighting: none
 vignette: >
   %\VignetteIndexEntry{HAPR probit}
   %\VignetteEngine{knitr::rmarkdown}
@@ -9,7 +11,7 @@ vignette: >
 
 ```{r, include = FALSE}
 library(tidyverse)
-devtools::load_all()
+library(hapr)
 
 # Set seed for reproducibility
 set.seed(123)
@@ -51,7 +53,7 @@ heart_disease_index <- prevent_index + V
 prob_ascvd <- pnorm(heart_disease_index)
 
 # Generate ASCVD flag based on probability
-ascvd_flag <- rbinom(n, 1, prob_ascvd)
+ascvd_flag <- as.logical(rbinom(n, 1, prob_ascvd))
 
 # Create dataset
 cvd_true_data <- tibble(
@@ -91,14 +93,14 @@ The main estimation function is `hapr()`.
 library(hapr)
 
 covariates <- heart_disease_data |> select(prevent_score, gender) # Covariates
+w <- model.matrix(~ prevent_score + gender, data = covariates)[, -1, drop = FALSE]
 
 hapr_fit <- hapr(
   y = heart_disease_data$ascvd, # Outcome
   gc = heart_disease_data$polygenic_score, # Polygenic score
-  w = covariates, # Covariates
+  w = w, # Covariates (numeric matrix, no intercept)
   model_type = "probit",
-  r2_current = 0.02, # Current R-squared of the polygenic score
-  r2_future = 0.2 # Future R-squared of the polygenic score, estimate of heritability
+  improvement_ratio = 10 # Future R^2 (0.2) / current R^2 (0.02)
 )
 
 print(hapr_fit)
@@ -114,10 +116,15 @@ simulated_data <- hapr_simulate(hapr_fit, covariates)
 head(simulated_data)
 ```
 
-The `simulated_data` contains the true polygenic score, the observed polygenic score, and the outcome. This is the dream dataset we would like to have to evaluate the utility of the polygenic score. Moreover, with the predict function, we can add the predictions from each model to the data.
+The `simulated_data` contains the true polygenic score, the observed polygenic score, and the outcome. This is the dream dataset we would like to have to evaluate the utility of the polygenic score. We can generate predictions by providing a `w` matrix formatted the same way as in the original `hapr()` call.
 
 ```{r}
-risk_dataset <- predict(hapr_fit, simulated_data)
+w_pred <- model.matrix(~ prevent_score + gender, data = simulated_data)[, -1, drop = FALSE]
+
+risk_dataset <- predict(
+  hapr_fit,
+  list(w = w_pred, gc = simulated_data$gc, gf = simulated_data$gf)
+)
 
 head(risk_dataset)
 ```
@@ -144,12 +151,11 @@ ggplot(risk_dataset, aes(x = y_hat_w, y = y_hat_gf_w)) +
        y = "Predicted risk using future polygenic score")
 ```
 
+## Notes on data inputs and survival MLE
 
+`hapr()` expects `w` as a numeric matrix without an intercept column. For factors or data frames, use `model.matrix()` and drop the intercept as shown above.
 
-
-
-
-
+For parametric survival models, use `hapr_mle_survival()` with `model_type = "exponential"` or `"weibull"`. These MLE models are separate from the two-stage estimators shown in this vignette.
 
 
 

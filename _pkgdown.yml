@@ -20,6 +20,7 @@ articles:
   - title: "Vignettes"
     contents:
       - probit
+      - weibull_survival
 
 reference:
   - title: "Core Functions"
@@ -27,11 +28,14 @@ reference:
       - hapr
       - hapr_first_stage
       - hapr_second_stage
+      - hapr_mle_survival
       - hapr_simulate
       - abc
 
   - title: "S3 Methods"
     contents:
       - predict.hapr_fit
+      - print.hapr_first_stage_fit
       - print.hapr_fit
+      - print.hapr_mle_fit
       - summary.hapr_fit

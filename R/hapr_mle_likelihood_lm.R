@@ -7,6 +7,7 @@
 #' @param posterior List with a, b, c parameters
 #'
 #' @return Function(params) returning negative log-likelihood
+#' @keywords internal
 make_hapr_mle_likelihood_lm <- function(y, gc, w_theta, X_w, posterior) {
   avg_linpred <- posterior$a * gc + posterior$b * w_theta
   function(params) {

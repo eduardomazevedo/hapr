@@ -140,6 +140,7 @@ hapr_second_stage <- function(
 #' @param derived_vars List containing var_epsilon
 #'
 #' @return Matrix J of dimensions (length(beta)) x (length(gamma) + length(theta) + 1)
+#' @keywords internal
 calculate_analytical_jacobian <- function(model_type, gamma, theta, var_total, posterior, beta, derived_vars) {
   
   ng <- length(gamma)
@@ -287,6 +288,7 @@ calculate_analytical_jacobian <- function(model_type, gamma, theta, var_total, p
 #' @param coefficients A list containing gamma and theta coefficients
 #' @param improvement_ratio The ratio to extrapolate by
 #' @return A list with posterior stats and beta coefficients
+#' @keywords internal
 calculate_parameters <- function(model_type, coefficients, improvement_ratio) {
   var_epsilon <- 1 - 1 / improvement_ratio
   var_v <- coefficients$var_v_plus_var_epsilon - var_epsilon
