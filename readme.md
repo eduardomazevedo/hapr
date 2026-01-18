@@ -21,7 +21,7 @@ devtools::install_github("eduardomazevedo/hapr")
 ```
 
 ## Example
-In this example, we'll analyze cardiovascular disease risk prediction. Our current GWAS polygenic score has an R^2 of 2%, whereas the heritability of the disease is about 20%. We can use HAPR to measure the effectiveness of the current polygenic score and a future score as the GWAS improves. The example considers a future score that reaches the R^2 of 20%.
+In this example, we'll analyze cardiovascular disease risk prediction. Our current GWAS polygenic score has an R^2 around 2-3%, whereas the heritability of the disease is about 25-30%. We can use HAPR to measure the effectiveness of the current polygenic score and a future score as the GWAS improves. The example considers a future score with a 10x improvement ratio.
 
 ``` r
 library(hapr)
@@ -54,7 +54,7 @@ hapr_fit <- hapr(
   gc = heart_disease_data$polygenic_score, # Current polygenic score
   w = w,                                 # Covariates (numeric matrix, no intercept)
   model_type = "probit",                 # Binary outcome model
-  improvement_ratio = 10                 # Ratio of future R² (0.2) to current R² (0.02)
+  improvement_ratio = 10                 # Ratio of future R² to current R²
 )
 
 print(hapr_fit)
@@ -63,15 +63,27 @@ print(hapr_fit)
 #> Model type: probit 
 #> 
 #> Beta coefficients (future PRS effects):
-#>               Estimate
-#> (Intercept)    -2.5898
-#> gf              2.6462
-#> prevent_score   7.0468
-#> gendermale      0.3171
+#>             Estimate Std.Error   Lower   Upper
+#> gf            2.6462    1.9631 -1.2013  6.4937
+#> (Intercept)  -2.5898    0.7013 -3.9644 -1.2153
+#> w1            7.0468    2.1548  2.8235 11.2702
+#> w2            0.3171    0.3166 -0.3034  0.9376
 #> 
-#> Improvement ratio: 10.0000 ( r2_future )
-#> R² current: 0.0200 ( user_provided )
-#> R² future: 0.2000 
+#> Note: Standard errors are delta-method approximations and may be conservative.
+#> 
+#> Theta coefficients (gc ~ w): 
+#>             Estimate Std.Error    Lower   Upper
+#> (Intercept)  0.03132   0.04856 -0.06385 0.12649
+#> w1           0.31124   0.53488 -0.73710 1.35958
+#> w2          -0.09909   0.06672 -0.22987 0.03169
+#> 
+#> Stage 1 variance (v + epsilon): 
+#>                        Estimate Std.Error Lower Upper
+#> var_v_plus_var_epsilon   0.9998   0.04478 0.912 1.088
+#> 
+#> Improvement ratio: 10.0000 
+#> R² current: 0.0274 
+#> R² future: 0.2737 
 #> Max improvement ratio: 4573.9453
 ```
 
@@ -92,13 +104,20 @@ risk_dataset <- predict(
 )
 
 head(risk_dataset)
-#>           gf         gc prevent_score gender    y_hat_w y_hat_gc_w  y_hat_gf_w
-#> 1 -0.2303620 -1.0964639    0.04275714 female 0.04831298 0.02639364 0.001877092
-#> 2 -0.1819389 -1.0103211    0.18114824   male 0.21443238 0.15604899 0.069752551
-#> 3 -0.1400503  0.6446940    0.08136762 female 0.07629351 0.08999877 0.008492222
-#> 4  0.1037776  0.6331684    0.01474663   male 0.03699994 0.04588312 0.029101187
-#> 5  0.1831262  0.8419155    0.02379530   male 0.04159394 0.05617229 0.052569730
-#> 6  0.5425069  1.8761863    0.01532521 female 0.03395948 0.06825223 0.147726142
+#>   w.prevent_score w.gendermale         gc         gf    y_hat_w y_hat_gc_w
+#> 1      0.04275714            0 -1.0964639 -0.2303620 0.04831298 0.02639364
+#> 2      0.18114824            1 -1.0103211 -0.1819389 0.21443238 0.15604899
+#> 3      0.08136762            0  0.6446940 -0.1400503 0.07629351 0.08999877
+#> 4      0.01474663            1  0.6331684  0.1037776 0.03699994 0.04588312
+#> 5      0.02379530            1  0.8419155  0.1831262 0.04159394 0.05617229
+#> 6      0.01532521            0  1.8761863  0.5425069 0.03395948 0.06825223
+#>    y_hat_gf_w
+#> 1 0.001877092
+#> 2 0.069752551
+#> 3 0.008492222
+#> 4 0.029101187
+#> 5 0.052569730
+#> 6 0.147726142
 ```
 
 See the vignettes for more examples with quantitative traits and more advanced analysis.
