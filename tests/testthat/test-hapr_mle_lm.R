@@ -1,8 +1,6 @@
 #' Test MLE estimator against two-stage linear model
 
 test_that("hapr_mle matches two-stage estimates for linear model", {
-  source(testthat::test_path("..", "..", "dev", "mock_dataset.R"))
-
   var_epsilon_values <- c(0.5, 0.6, 0.7, 0.8, 0.9)
   run_slow_env <- Sys.getenv("RUN_SLOW_TESTS", unset = "false")
   run_slow <- tolower(run_slow_env) %in% c("true", "1", "yes")

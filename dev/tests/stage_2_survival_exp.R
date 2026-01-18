@@ -4,7 +4,7 @@
 
 devtools::load_all()
 
-source("dev/mock_dataset.R")
+source("tests/testthat/helper-mock_dataset.R")
 
 set.seed(123)
 

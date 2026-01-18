@@ -5,18 +5,6 @@
 #' Produces artifact tables comparing true coefficients, estimates, SEs, and CIs.
 
 test_that("Survival MLE point estimates are within 4 SE", {
-  mock_dataset_path <- file.path("dev", "mock_dataset.R")
-  if (file.exists(mock_dataset_path)) {
-    source(mock_dataset_path)
-  } else {
-    mock_dataset_path <- file.path("..", "..", "dev", "mock_dataset.R")
-    if (file.exists(mock_dataset_path)) {
-      source(mock_dataset_path)
-    } else {
-      stop("Cannot find dev/mock_dataset.R")
-    }
-  }
-
   BETA_G <- 0.6
   BETA_W <- c(0.1, -0.2, 0.15, 0.05)
   THETA <- c(0.0, 0.1, -0.25, 0.2)

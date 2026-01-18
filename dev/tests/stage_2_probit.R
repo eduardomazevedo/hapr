@@ -6,7 +6,7 @@
 devtools::load_all()
 
 # Source mock dataset functions
-source("dev/mock_dataset.R")
+source("tests/testthat/helper-mock_dataset.R")
 
 # Set seed for reproducibility
 set.seed(123)
