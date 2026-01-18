@@ -56,7 +56,7 @@ hapr_simulate <- function(object, w, gc = NULL, repetitions = 1) {
   n <- nrow(w) * repetitions
   w <- as.data.frame(w[rep(seq_len(nrow(w)), repetitions), ])
 
-  wtheta <- model.matrix(~., data = w) %*% fit$coefficients$theta
+  wtheta <- model.matrix(~., data = w) %*% fit$parameters$theta
 
   if (is.null(gc)) {
     gf <- rnorm(n, 0, sqrt(fit$stats$var_v)) + wtheta

@@ -11,13 +11,13 @@ print.hapr_first_stage_fit <- function(x, ...) {
   monkey <- "\U1F435"
   cat(monkey, " HAPR First Stage Fit ", monkey, "\n")
   cat("-------------------------------------------\n")
-  
+
   cat("Model type:", x$model_type, "\n\n")
-  
+
   print_ci_table("Theta coefficients (gc ~ w):",
                  x$parameters$theta,
                  x$vcov_parameters$theta)
-  
+
   if (!is.null(x$parameters$gamma) && !is.null(x$vcov_parameters$gamma)) {
     print_ci_table("Gamma coefficients (y ~ gc + w):",
                    x$parameters$gamma,
@@ -26,88 +26,15 @@ print.hapr_first_stage_fit <- function(x, ...) {
     cat("Gamma coefficients (y ~ gc + w):\n")
     cat("  (not estimated for model_type = 'mle')\n\n")
   }
-  
+
   print_ci_table("Var(v + epsilon):",
                  c(var_v_plus_var_epsilon = x$parameters$var_v_plus_var_epsilon),
                  x$vcov_parameters$var_v_plus_var_epsilon)
+
   cat("Max improvement ratio:", sprintf("%.4f", x$stats$max_improvement_ratio), "\n")
   cat("Var(w*theta):", sprintf("%.4f", x$stats$var_wtheta), "\n")
-  
+
   invisible(x)
-}
-
-print_coef_table <- function(values, max_show = 5) {
-  n_coef <- nrow(values)
-  n_to_show <- min(max_show, n_coef)
-  table <- values[1:n_to_show, , drop = FALSE]
-  list(table = table, truncated = n_coef > max_show, total = n_coef)
-}
-
-print_named_values <- function(title, values, digits = 4) {
-  cat(title, "\n")
-  table <- data.frame(Estimate = values, row.names = names(values))
-  print(table, digits = digits)
-  cat("\n")
-}
-
-make_ci_table <- function(estimates, se, level = 0.95) {
-  z <- stats::qnorm(1 - (1 - level) / 2)
-  data.frame(
-    Estimate = estimates,
-    Std.Error = se,
-    Lower = estimates - z * se,
-    Upper = estimates + z * se,
-    row.names = names(estimates),
-    check.names = FALSE
-  )
-}
-
-delta_list_to_vector <- function(delta) {
-  if (is.null(delta)) {
-    return(numeric(0))
-  }
-  if (is.list(delta)) {
-    return(unlist(delta, use.names = TRUE))
-  }
-  delta
-}
-
-extract_se <- function(estimates, vcov) {
-  if (is.null(vcov)) {
-    return(NULL)
-  }
-  if (is.matrix(vcov)) {
-    se <- sqrt(diag(vcov))
-    names(se) <- names(estimates)
-    return(se)
-  }
-  se <- sqrt(as.numeric(vcov))
-  names(se) <- names(estimates)
-  se
-}
-
-subset_vcov <- function(vcov, idx) {
-  if (is.null(vcov) || !is.matrix(vcov) || length(idx) == 0) {
-    return(NULL)
-  }
-  vcov[idx, idx, drop = FALSE]
-}
-
-print_ci_table <- function(title, estimates, vcov, max_show = 5) {
-  se <- extract_se(estimates, vcov)
-  if (is.null(se)) {
-    print_named_values(title, estimates)
-    return(invisible(NULL))
-  }
-  cat(title, "\n")
-  ci <- make_ci_table(estimates, se)
-  coef_table <- print_coef_table(ci, max_show = max_show)
-  print(coef_table$table, digits = 4)
-  if (coef_table$truncated) {
-    cat("  Showing first 5 of", coef_table$total, "coefficients\n")
-  }
-  cat("\n")
-  invisible(ci)
 }
 
 #' Print method for hapr_fit objects
@@ -154,7 +81,6 @@ print.hapr_fit <- function(x, ...) {
   cat("Improvement ratio:", sprintf("%.4f", x$stats$improvement_ratio), "\n")
 
   if (!is.na(x$stats$r2_current)) {
-    # Use scientific notation for very small values (< 0.0001)
     if (abs(x$stats$r2_current) < 0.0001 && x$stats$r2_current != 0) {
       cat("R\U00B2 current:", sprintf("%.4e", x$stats$r2_current), "\n")
     } else {
@@ -163,7 +89,6 @@ print.hapr_fit <- function(x, ...) {
   }
 
   if (!is.na(x$stats$r2_future)) {
-    # Use scientific notation for very small values (< 0.0001)
     if (abs(x$stats$r2_future) < 0.0001 && x$stats$r2_future != 0) {
       cat("R\U00B2 future:", sprintf("%.4e", x$stats$r2_future), "\n")
     } else {
@@ -277,8 +202,7 @@ summary.hapr_fit <- function(object, ...) {
     r2_future = object$stats$r2_future,
     posterior = object$stats$posterior
   )
-  
-  # Add model-specific parameters if present
+
   if (!is.null(object$parameters$var_eta)) {
     result$var_eta <- object$parameters$var_eta
   }
@@ -325,7 +249,6 @@ print.summary.hapr_fit <- function(x, ...) {
   cat("Improvement ratio:", sprintf("%.4f", x$improvement_ratio), "\n")
   cat("Max improvement ratio:", sprintf("%.4f", x$max_improvement_ratio), "\n")
   if (!is.na(x$r2_current)) {
-    # Use scientific notation for very small values (< 0.0001)
     if (abs(x$r2_current) < 0.0001 && x$r2_current != 0) {
       cat("R\U00B2 current:", sprintf("%.4e", x$r2_current), "\n")
     } else {
@@ -333,7 +256,6 @@ print.summary.hapr_fit <- function(x, ...) {
     }
   }
   if (!is.na(x$r2_future)) {
-    # Use scientific notation for very small values (< 0.0001)
     if (abs(x$r2_future) < 0.0001 && x$r2_future != 0) {
       cat("R\U00B2 future:", sprintf("%.4e", x$r2_future), "\n")
     } else {
@@ -353,6 +275,6 @@ print.summary.hapr_fit <- function(x, ...) {
   if (!is.null(x$var_eta)) {
     cat("Var(eta):", sprintf("%.4f", x$var_eta), "\n\n")
   }
-  
+
   invisible(x)
 }
