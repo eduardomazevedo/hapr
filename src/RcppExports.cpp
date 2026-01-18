@@ -26,9 +26,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// hapr_mle_survival_exp_nll_cpp
+double hapr_mle_survival_exp_nll_cpp(const arma::vec& params, const arma::vec& event_time, const arma::vec& event_status, const arma::vec& avg_linpred, const arma::mat& X_w, double post_c);
+RcppExport SEXP _hapr_hapr_mle_survival_exp_nll_cpp(SEXP paramsSEXP, SEXP event_timeSEXP, SEXP event_statusSEXP, SEXP avg_linpredSEXP, SEXP X_wSEXP, SEXP post_cSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type event_time(event_timeSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type event_status(event_statusSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type avg_linpred(avg_linpredSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X_w(X_wSEXP);
+    Rcpp::traits::input_parameter< double >::type post_c(post_cSEXP);
+    rcpp_result_gen = Rcpp::wrap(hapr_mle_survival_exp_nll_cpp(params, event_time, event_status, avg_linpred, X_w, post_c));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_hapr_hapr_mle_lm_nll_cpp", (DL_FUNC) &_hapr_hapr_mle_lm_nll_cpp, 5},
+    {"_hapr_hapr_mle_survival_exp_nll_cpp", (DL_FUNC) &_hapr_hapr_mle_survival_exp_nll_cpp, 6},
     {NULL, NULL, 0}
 };
 

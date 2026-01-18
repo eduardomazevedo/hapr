@@ -5,3 +5,7 @@ hapr_mle_lm_nll_cpp <- function(params, y, avg_linpred, X_w, post_c) {
     .Call(`_hapr_hapr_mle_lm_nll_cpp`, params, y, avg_linpred, X_w, post_c)
 }
 
+hapr_mle_survival_exp_nll_cpp <- function(params, event_time, event_status, avg_linpred, X_w, post_c) {
+    .Call(`_hapr_hapr_mle_survival_exp_nll_cpp`, params, event_time, event_status, avg_linpred, X_w, post_c)
+}
+
