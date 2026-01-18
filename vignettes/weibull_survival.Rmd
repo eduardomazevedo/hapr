@@ -110,39 +110,9 @@ pred_df$risk_10yr <- 1 - exp(- (t_horizon / pred_df$scale)^k_hat)
 head(pred_df[, c("linpred_gf_w", "scale", "risk_10yr")])
 ```
 
-Next we compare HAPR predictions to a baseline Weibull model that uses the observed `gc` and covariates `w`. We fit this baseline with the `survival` package, then compute its linear predictor, scale, and 10-year risk. The scatterplots put the baseline on the x-axis and the HAPR prediction on the y-axis. Since HAPR reflects additional future information, its predictions should show more dispersion.
 
-```{r}
-gc_fit <- survival::survreg(
-  Surv(event_time, event_status) ~ gc + prevent_score + gender,
-  dist = "weibull"
-)
 
-pred_df$gc_linpred <- predict(gc_fit, type = "lp")
-pred_df$gc_scale <- exp(pred_df$gc_linpred)
-gc_k <- 1 / gc_fit$scale
-pred_df$gc_risk_10yr <- 1 - exp(-(t_horizon / pred_df$gc_scale)^gc_k)
-```
 
-```{r, fig.alt = "HAPR vs baseline Weibull prediction scatterplots"}
-# Linear predictor: baseline vs HAPR
-ggplot(pred_df, aes(x = gc_linpred, y = linpred_gf_w)) +
-  geom_point(alpha = 0.5) +
-  theme_minimal() +
-  labs(x = "Baseline linear predictor (gc + w)", y = "HAPR linear predictor (gf + w)")
-
-# Scale: baseline vs HAPR
-ggplot(pred_df, aes(x = gc_scale, y = scale)) +
-  geom_point(alpha = 0.5) +
-  theme_minimal() +
-  labs(x = "Baseline scale (gc + w)", y = "HAPR scale (gf + w)")
-
-# 10-year risk: baseline vs HAPR
-ggplot(pred_df, aes(x = gc_risk_10yr, y = risk_10yr)) +
-  geom_point(alpha = 0.5) +
-  theme_minimal() +
-  labs(x = "Baseline 10-year risk (gc + w)", y = "HAPR 10-year risk (gf + w)")
-```
 
 Notes:
 
