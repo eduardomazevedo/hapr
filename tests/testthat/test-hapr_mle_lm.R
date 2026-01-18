@@ -11,11 +11,6 @@ test_that("hapr_mle matches two-stage estimates for linear model", {
   theta <- c(0.0, 0.1, -0.2, 0.25)
   var_y <- 1.0
 
-  loglik_fn <- function(y, linpred, delta) {
-    sigma <- exp(delta["log_sigma"])
-    stats::dnorm(y, mean = linpred, sd = sigma, log = TRUE)
-  }
-
   artifact_dir <- testthat::test_path("_artifacts", "mle_lm")
   if (!dir.exists(artifact_dir)) {
     dir.create(artifact_dir, recursive = TRUE)
@@ -63,16 +58,15 @@ test_that("hapr_mle matches two-stage estimates for linear model", {
       start_delta <- c(log_sigma = 0.0)
 
       mle_time <- system.time({
-        mle_fit <- hapr_mle(
-          y = data$y,
-          gc = data$gc,
-          w = data$w,
-          improvement_ratio = improvement_ratio,
-          loglik_fn = loglik_fn,
-          start_beta = start_beta,
-          start_delta = start_delta,
-          control = list(maxit = 150)
-        )
+      mle_fit <- hapr_mle(
+        y = data$y,
+        gc = data$gc,
+        w = data$w,
+        improvement_ratio = improvement_ratio,
+        start_beta = start_beta,
+        start_delta = start_delta,
+        control = list(maxit = 150)
+      )
       })
       runtime_two_stage_ms <- two_stage_time[["elapsed"]] * 1000
       runtime_mle_ms <- mle_time[["elapsed"]] * 1000

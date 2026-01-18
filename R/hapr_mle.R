@@ -1,16 +1,14 @@
 #' HAPR maximum likelihood estimation
 #'
 #' @description
-#' Fits the HAPR model by maximum likelihood using a user-supplied log-likelihood
-#' function for the outcome conditional on the latent index.
+#' Fits the HAPR linear model by maximum likelihood using Gauss-Hermite quadrature.
 #'
 #' @param y Outcome vector
 #' @param gc Current PRS vector (will be normalized)
 #' @param w Covariate matrix (no intercept column)
 #' @param improvement_ratio R-squared improvement ratio (required)
-#' @param loglik_fn Function with signature loglik_fn(y, linpred, delta)
 #' @param start_beta Named numeric vector for beta parameters (gf, (Intercept), w1, ...)
-#' @param start_delta Named numeric vector for additional parameters (optional)
+#' @param start_delta Named numeric vector for additional parameters (optional, log_sigma)
 #' @param control List passed to stats::optim
 #'
 #' @return A hapr_mle_fit object with MLE estimates and diagnostics
@@ -20,15 +18,11 @@ hapr_mle <- function(
     gc,
     w,
     improvement_ratio,
-    loglik_fn,
     start_beta,
     start_delta = NULL,
     control = list()) {
   if (missing(improvement_ratio) || is.null(improvement_ratio)) {
     stop("improvement_ratio must be specified.")
-  }
-  if (!is.function(loglik_fn)) {
-    stop("loglik_fn must be a function")
   }
   if (is.null(start_beta) || !is.numeric(start_beta)) {
     stop("start_beta must be a numeric vector")
@@ -36,7 +30,6 @@ hapr_mle <- function(
   if (any(is.na(y))) {
     stop("y must not contain missing values")
   }
-  n <- length(y)
 
   first_stage <- hapr_first_stage(y = y, gc = gc, w = w, model_type = "mle")
 
@@ -75,73 +68,25 @@ hapr_mle <- function(
     if (!is.numeric(start_delta)) {
       stop("start_delta must be a numeric vector")
     }
-    if (is.null(names(start_delta))) {
-      names(start_delta) <- paste0("delta", seq_along(start_delta))
+    if (length(start_delta) != 1) {
+      stop("start_delta must contain exactly one element (log_sigma).")
     }
+    names(start_delta) <- "log_sigma"
   } else {
-    start_delta <- numeric(0)
+    start_delta <- c(log_sigma = 0)
   }
 
   start_params <- c(start_beta, start_delta)
 
-  # Gauss-Hermite nodes/weights for N(0,1) integration (n = 20, hardcoded).
-  z_nodes <- c(
-    -7.6190485, -6.5105902, -5.5787388, -4.7345813, -3.9439674, -3.1890148,
-    -2.4586636, -1.7452473, -1.0429453, -0.3469642, 0.3469642, 1.0429453,
-    1.7452473, 2.4586636, 3.1890148, 3.9439674, 4.7345813, 5.5787388,
-    6.5105902, 7.6190485
-  )
-  weights <- c(
-    1.257801e-13, 2.482062e-10, 6.127490e-08, 4.402121e-06, 1.288263e-04,
-    1.830103e-03, 1.399784e-02, 6.150637e-02, 1.617393e-01, 2.607931e-01,
-    2.607931e-01, 1.617393e-01, 6.150637e-02, 1.399784e-02, 1.830103e-03,
-    1.288263e-04, 4.402121e-06, 6.127490e-08, 2.482062e-10, 1.257801e-13
-  )
-  log_weights <- log(weights)
-
   X_w <- add_intercept(w)
   w_theta <- c(X_w %*% theta_hat)
-
-  row_log_sum_exp <- function(mat) {
-    row_max <- apply(mat, 1, max)
-    row_max + log(rowSums(exp(mat - row_max)))
-  }
-
-  neg_loglik <- function(params) {
-    beta <- params[seq_len(nb)]
-    names(beta) <- beta_names
-    if (length(params) > nb) {
-      delta <- params[(nb + 1):length(params)]
-      names(delta) <- names(start_delta)
-    } else {
-      delta <- numeric(0)
-    }
-    beta_g <- beta[["gf"]]
-    beta_w <- beta[beta_names[-1]]
-
-    base_linear <- beta_g * (posterior$a * gc + posterior$b * w_theta) +
-      c(X_w %*% beta_w)
-
-    # Accumulate log-likelihoods across quadrature nodes.
-    loglik_mat <- matrix(NA_real_, nrow = n, ncol = length(z_nodes))
-    for (j in seq_along(z_nodes)) {
-      linpred <- base_linear + beta_g * posterior$c * z_nodes[j]
-      loglik_vec <- loglik_fn(y = y, linpred = linpred, delta = delta)
-      if (length(loglik_vec) != n) {
-        stop("loglik_fn must return a vector of length length(y).")
-      }
-      if (any(!is.finite(loglik_vec))) {
-        return(1e12)
-      }
-      loglik_mat[, j] <- loglik_vec + log_weights[j]
-    }
-
-    ll <- sum(row_log_sum_exp(loglik_mat))
-    if (!is.finite(ll)) {
-      return(1e12)
-    }
-    -ll
-  }
+  neg_loglik <- make_hapr_mle_likelihood_lm(
+    y = y,
+    gc = gc,
+    w_theta = w_theta,
+    X_w = X_w,
+    posterior = posterior
+  )
   
   opt <- stats::optim(
     par = start_params,
