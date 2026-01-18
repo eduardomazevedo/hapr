@@ -14,7 +14,7 @@ set.seed(123)
 # Parameters for mock dataset
 n <- 1000
 var_epsilon <- 0.9
-var_v <- 1 - var_epsilon / 2
+var_v <- (1 - var_epsilon) * 0.5
 
 beta_g <- 1.42  # Effect of future PRS (gf) on outcome
 beta_w <- c(0.1, 0.17, 0.27, -0.27)  # Intercept + 3 covariate effects
@@ -58,3 +58,5 @@ second_stage_fit <- hapr_second_stage(
   first_stage = first_stage_fit,
   improvement_ratio = improvement_ratio
 )
+
+print(second_stage_fit)

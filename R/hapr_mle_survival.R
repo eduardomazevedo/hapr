@@ -149,12 +149,23 @@ hapr_mle_survival <- function(
 
   vcov_all <- NULL
   standard_errors <- NULL
+  ci_beta <- NULL
   if (is.matrix(opt$hessian)) {
     vcov_try <- try(solve(opt$hessian), silent = TRUE)
     if (!inherits(vcov_try, "try-error")) {
+      dimnames(vcov_try) <- list(names(mle_params), names(mle_params))
       vcov_all <- vcov_try
       standard_errors <- sqrt(diag(vcov_all))[seq_len(nb)]
       names(standard_errors) <- beta_names
+      z <- stats::qnorm(0.975)
+      ci_beta <- data.frame(
+        Estimate = beta_hat,
+        Std.Error = standard_errors,
+        Lower = beta_hat - z * standard_errors,
+        Upper = beta_hat + z * standard_errors,
+        row.names = beta_names,
+        check.names = FALSE
+      )
     }
   }
 
@@ -171,6 +182,7 @@ hapr_mle_survival <- function(
       all = vcov_all
     ),
     standard_errors = standard_errors,
+    ci_beta = ci_beta,
     stats = list(
       var_v = var_v,
       var_epsilon = var_epsilon,

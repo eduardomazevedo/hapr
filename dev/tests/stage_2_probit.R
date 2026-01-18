@@ -56,3 +56,5 @@ second_stage_fit <- hapr_second_stage(
   first_stage = first_stage_fit,
   improvement_ratio = improvement_ratio
 )
+
+print(second_stage_fit)

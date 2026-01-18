@@ -94,7 +94,7 @@ hapr_second_stage <- function(
   y_on_gf_w$vcov_parameters <- vcov_beta
   
   # Initialize parameters list for output
-  parameters <- list(beta = beta)
+  parameters <- list(beta = beta, theta = theta_hat)
   
   # Add model-specific additional parameters to the same list
   if (first_stage$model_type == "lm") {

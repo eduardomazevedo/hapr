@@ -14,33 +14,93 @@ print.hapr_first_stage_fit <- function(x, ...) {
   
   cat("Model type:", x$model_type, "\n\n")
   
-  cat("Theta coefficients (gc ~ w):\n")
-  theta_to_show <- x$parameters$theta[1:min(5, length(x$parameters$theta))]
-  coef_table <- data.frame(Estimate = theta_to_show, row.names = names(theta_to_show))
-  print(coef_table, digits = 4)
-  if (length(x$parameters$theta) > 5) {
-    cat("  Showing first 5 of", length(x$parameters$theta), "coefficients\n")
-  }
-  cat("\n")
+  print_ci_table("Theta coefficients (gc ~ w):",
+                 x$parameters$theta,
+                 x$vcov_parameters$theta)
   
-  cat("Gamma coefficients (y ~ gc + w):\n")
-  if (!is.null(x$parameters$gamma)) {
-    gamma_to_show <- x$parameters$gamma[1:min(5, length(x$parameters$gamma))]
-    coef_table <- data.frame(Estimate = gamma_to_show, row.names = names(gamma_to_show))
-    print(coef_table, digits = 4)
-    if (length(x$parameters$gamma) > 5) {
-      cat("  Showing first 5 of", length(x$parameters$gamma), "coefficients\n")
-    }
+  if (!is.null(x$parameters$gamma) && !is.null(x$vcov_parameters$gamma)) {
+    print_ci_table("Gamma coefficients (y ~ gc + w):",
+                   x$parameters$gamma,
+                   x$vcov_parameters$gamma)
   } else {
-    cat("  (not estimated for model_type = 'mle')\n")
+    cat("Gamma coefficients (y ~ gc + w):\n")
+    cat("  (not estimated for model_type = 'mle')\n\n")
   }
-  cat("\n")
   
-  cat("Var(v + epsilon):", sprintf("%.4f", x$parameters$var_v_plus_var_epsilon), "\n")
+  print_ci_table("Var(v + epsilon):",
+                 c(var_v_plus_var_epsilon = x$parameters$var_v_plus_var_epsilon),
+                 x$vcov_parameters$var_v_plus_var_epsilon)
   cat("Max improvement ratio:", sprintf("%.4f", x$stats$max_improvement_ratio), "\n")
   cat("Var(w*theta):", sprintf("%.4f", x$stats$var_wtheta), "\n")
   
   invisible(x)
+}
+
+print_coef_table <- function(values, max_show = 5) {
+  n_coef <- nrow(values)
+  n_to_show <- min(max_show, n_coef)
+  table <- values[1:n_to_show, , drop = FALSE]
+  list(table = table, truncated = n_coef > max_show, total = n_coef)
+}
+
+print_named_values <- function(title, values, digits = 4) {
+  cat(title, "\n")
+  table <- data.frame(Estimate = values, row.names = names(values))
+  print(table, digits = digits)
+  cat("\n")
+}
+
+make_ci_table <- function(estimates, se, level = 0.95) {
+  z <- stats::qnorm(1 - (1 - level) / 2)
+  data.frame(
+    Estimate = estimates,
+    Std.Error = se,
+    Lower = estimates - z * se,
+    Upper = estimates + z * se,
+    row.names = names(estimates),
+    check.names = FALSE
+  )
+}
+
+extract_se <- function(estimates, vcov) {
+  if (is.null(vcov)) {
+    return(NULL)
+  }
+  if (is.matrix(vcov)) {
+    se <- sqrt(diag(vcov))
+    names(se) <- names(estimates)
+    return(se)
+  }
+  se <- sqrt(as.numeric(vcov))
+  names(se) <- names(estimates)
+  se
+}
+
+subset_vcov <- function(vcov, names_subset) {
+  if (is.null(vcov) || !is.matrix(vcov)) {
+    return(NULL)
+  }
+  if (is.null(dimnames(vcov))) {
+    return(NULL)
+  }
+  vcov[names_subset, names_subset, drop = FALSE]
+}
+
+print_ci_table <- function(title, estimates, vcov, max_show = 5) {
+  se <- extract_se(estimates, vcov)
+  if (is.null(se)) {
+    print_named_values(title, estimates)
+    return(invisible(NULL))
+  }
+  cat(title, "\n")
+  ci <- make_ci_table(estimates, se)
+  coef_table <- print_coef_table(ci, max_show = max_show)
+  print(coef_table$table, digits = 4)
+  if (coef_table$truncated) {
+    cat("  Showing first 5 of", coef_table$total, "coefficients\n")
+  }
+  cat("\n")
+  invisible(ci)
 }
 
 #' Print method for hapr_fit objects
@@ -59,15 +119,30 @@ print.hapr_fit <- function(x, ...) {
 
   cat("Model type:", x$model_type, "\n\n")
 
-  cat("Beta coefficients (future PRS effects):\n")
-  n_coef <- nrow(x$ci_beta)
-  n_to_show <- min(5, n_coef)
-  coef_table <- x$ci_beta[1:n_to_show, , drop = FALSE]
-  print(coef_table, digits = 4)
-  if (n_coef > 5) {
-    cat("  Showing first 5 of", n_coef, "coefficients\n")
+  print_ci_table("Beta coefficients (future PRS effects):",
+                 x$parameters$beta,
+                 x$vcov_parameters$beta)
+  cat("Note: Standard errors are delta-method approximations and may be conservative.\n\n")
+
+  if (!is.null(x$parameters$theta) && !is.null(x$vcov_parameters$theta)) {
+    print_ci_table("Theta coefficients (gc ~ w):",
+                   x$parameters$theta,
+                   x$vcov_parameters$theta)
   }
-  cat("\n")
+
+  if (!is.null(x$regressions$y_on_gc_w$sigma_squared) &&
+      !is.null(x$regressions$y_on_gc_w$var_sigma_squared)) {
+    print_ci_table("Delta parameter (sigma^2_y):",
+                   c(sigma2_y = x$regressions$y_on_gc_w$sigma_squared),
+                   x$regressions$y_on_gc_w$var_sigma_squared)
+  }
+
+  if (!is.null(x$regressions$gc_on_w$sigma_squared) &&
+      !is.null(x$regressions$gc_on_w$var_sigma_squared)) {
+    print_ci_table("Stage 1 variance (v + epsilon):",
+                   c(var_v_plus_var_epsilon = x$regressions$gc_on_w$sigma_squared),
+                   x$regressions$gc_on_w$var_sigma_squared)
+  }
 
   cat("Improvement ratio:", sprintf("%.4f", x$stats$improvement_ratio), "\n")
 
@@ -90,6 +165,72 @@ print.hapr_fit <- function(x, ...) {
   }
 
   cat("Max improvement ratio:", sprintf("%.4f", x$stats$max_improvement_ratio), "\n")
+
+  invisible(x)
+}
+
+#' Print method for hapr_mle_fit objects
+#'
+#' Prints a concise summary of a hapr_mle_fit object.
+#'
+#' @param x A hapr_mle_fit object
+#' @param ... Additional arguments (not used)
+#'
+#' @return The input object, invisibly
+#' @export
+print.hapr_mle_fit <- function(x, ...) {
+  monkey <- "\U1F435"
+  cat(monkey, " HAPR MLE Fit ", monkey, "\n")
+  cat("-------------------------------------------\n")
+
+  cat("Model type:", x$model_type, "\n\n")
+
+  vcov_beta <- subset_vcov(x$vcov_parameters$all, names(x$parameters$beta))
+  if (!is.null(vcov_beta)) {
+    print_ci_table("Beta coefficients:", x$parameters$beta, vcov_beta)
+    cat("Note: MLE standard errors ignore first-stage uncertainty.\n\n")
+  } else {
+    print_named_values("Beta coefficients:",
+                       x$parameters$beta[1:min(5, length(x$parameters$beta))])
+    if (length(x$parameters$beta) > 5) {
+      cat("  Showing first 5 of", length(x$parameters$beta), "coefficients\n\n")
+    }
+  }
+
+  if (length(x$parameters$delta) > 0) {
+    vcov_delta <- subset_vcov(x$vcov_parameters$all, names(x$parameters$delta))
+    if (!is.null(vcov_delta)) {
+      print_ci_table("Delta parameters:", x$parameters$delta, vcov_delta)
+    } else {
+      print_named_values("Delta parameters:", x$parameters$delta)
+    }
+  }
+
+  if (!is.null(x$parameters$var_v_plus_var_epsilon) &&
+      !is.null(x$regressions$gc_on_w$var_sigma_squared)) {
+    print_ci_table("Stage 1 variance (v + epsilon):",
+                   c(var_v_plus_var_epsilon = x$parameters$var_v_plus_var_epsilon),
+                   x$regressions$gc_on_w$var_sigma_squared)
+  }
+
+  if (!is.null(x$parameters$theta) &&
+      !is.null(x$regressions$gc_on_w$vcov_coefficients)) {
+    print_ci_table("Theta coefficients (gc ~ w):",
+                   x$parameters$theta,
+                   x$regressions$gc_on_w$vcov_coefficients)
+  }
+
+  cat("Improvement ratio:", sprintf("%.4f", x$stats$improvement_ratio), "\n")
+  cat("Max improvement ratio:", sprintf("%.4f", x$stats$max_improvement_ratio), "\n")
+  cat("Var(v):", sprintf("%.4f", x$stats$var_v), "\n")
+  cat("Var(epsilon):", sprintf("%.4f", x$stats$var_epsilon), "\n")
+
+  if (!is.null(x$opt)) {
+    cat("Convergence:", x$opt$convergence, "\n")
+    if (!is.null(x$opt$value)) {
+      cat("Neg. log-likelihood:", sprintf("%.4f", x$opt$value), "\n")
+    }
+  }
 
   invisible(x)
 }
@@ -152,6 +293,7 @@ print.summary.hapr_fit <- function(x, ...) {
     cat("95% Confidence Intervals for Beta (delta method):\n")
     print(x$ci_beta, digits = 4)
     cat("\n")
+    cat("Note: Standard errors are delta-method approximations and may be conservative.\n\n")
   }
 
   cat("Gamma coefficients (current PRS effects):\n")

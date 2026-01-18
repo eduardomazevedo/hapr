@@ -81,3 +81,5 @@ cat("y ~ gc + w R²:", first_stage_fit$regressions$y_on_gc_w$r2, "\n")
 cat("\n")
 
 cat(paste(rep("=", 72), collapse = ""), "\n")
+
+print(first_stage_fit)

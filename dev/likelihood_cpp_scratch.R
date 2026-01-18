@@ -1,3 +1,8 @@
+# Sandbox to develop C++ implementation of the HAPR likelihood
+# Simplest case of linear model with normal outcome
+# This is a scratch file to test the implementation and timing
+# It is not part of the package and is not used in the package
+
 rm(list = ls())
 library(Rcpp)
 library(RcppArmadillo)
