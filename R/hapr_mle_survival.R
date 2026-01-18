@@ -141,10 +141,10 @@ hapr_mle_survival <- function(
   beta_hat <- mle_params[seq_len(nb)]
   names(beta_hat) <- beta_names
   if (length(mle_params) > nb) {
-    delta_hat <- mle_params[(nb + 1):length(mle_params)]
+    delta_hat <- as.list(mle_params[(nb + 1):length(mle_params)])
     names(delta_hat) <- names(start_delta)
   } else {
-    delta_hat <- numeric(0)
+    delta_hat <- list()
   }
 
   vcov_all <- NULL

@@ -62,6 +62,16 @@ make_ci_table <- function(estimates, se, level = 0.95) {
   )
 }
 
+delta_list_to_vector <- function(delta) {
+  if (is.null(delta)) {
+    return(numeric(0))
+  }
+  if (is.list(delta)) {
+    return(unlist(delta, use.names = TRUE))
+  }
+  delta
+}
+
 extract_se <- function(estimates, vcov) {
   if (is.null(vcov)) {
     return(NULL)
@@ -198,16 +208,17 @@ print.hapr_mle_fit <- function(x, ...) {
     }
   }
 
-  if (length(x$parameters$delta) > 0) {
+  delta_values <- delta_list_to_vector(x$parameters$delta)
+  if (length(delta_values) > 0) {
     order_delta <- x$vcov_parameters$order$delta
     if (is.null(order_delta)) {
-      order_delta <- seq_along(x$parameters$delta)
+      order_delta <- seq_along(delta_values)
     }
     vcov_delta <- subset_vcov(x$vcov_parameters$all, order_delta)
     if (!is.null(vcov_delta)) {
-      print_ci_table("Delta parameters:", x$parameters$delta, vcov_delta)
+      print_ci_table("Delta parameters:", delta_values, vcov_delta)
     } else {
-      print_named_values("Delta parameters:", x$parameters$delta)
+      print_named_values("Delta parameters:", delta_values)
     }
   }
 

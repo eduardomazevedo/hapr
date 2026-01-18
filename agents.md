@@ -57,6 +57,7 @@ Model-specific conversion formulas are in `calculate_parameters()` and `calculat
 - **Coefficient naming**: Uses "gc" for current PRS, "gf" for future PRS in coefficient vectors
 - **Parameter ordering**: Prefer strict ordering when mapping estimates to vcov blocks (avoid name-based matching).
 - **Delta method**: Standard errors computed via analytical Jacobian (see `calculate_analytical_jacobian`)
+- **MLE delta parameters**: Stored as a named list in `parameters$delta` with model-specific entries (e.g., `log_sigma`, `log_k`)
 - **Testing**: Uses `testthat` - see `tests/testthat/` directory
 - **Local test runs**: Prefer `devtools::test()` to ensure local sources are loaded
 - **Test artifacts**: Write generated outputs to `tests/testthat/_artifacts` using `testthat::test_path()`

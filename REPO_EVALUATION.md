@@ -16,10 +16,8 @@ This review focuses on correctness, consistency, maintainability, and performanc
 - **Impact**: Runtime failures after package rebuilds or installs.
 - **Suggestion**: Add a CI check that compares NAMESPACE to the roxygen output or run roxygen in CI before tests.
 
-### 2) MLE “delta” handling is inconsistent
-- **Issue**: In MLE survival, `delta` is from optimizer and in LM `delta` is the log‑sigma. But prints and result structure still only loosely standardize this (`parameters$delta` is a vector but model meaning differs).
-- **Impact**: Harder to program against MLE results in downstream code or compare across models.
-- **Suggestion**: Document a standard convention for `parameters$delta` per model in code comments and docs (e.g., `log_sigma` for LM, `log_k` for Weibull). Optionally add a `delta_names` field or `delta_meaning` in result.
+### 2) MLE “delta” handling is inconsistent (resolved)
+- **Status**: `parameters$delta` now stores a named list of model‑specific likelihood parameters (e.g., `log_sigma` for LM, `log_k` for Weibull), which prevents accidental misinterpretation across models.
 
 ### 3) Stage‑1 and MLE print code depends on vcov naming (resolved)
 - **Status**: MLE print extraction now uses strict parameter ordering indices (not names) to align estimates and vcov blocks. This removes dependence on vcov dimnames or user‑supplied names.
