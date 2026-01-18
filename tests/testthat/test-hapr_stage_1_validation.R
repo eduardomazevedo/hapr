@@ -10,12 +10,12 @@ test_that("hapr_first_stage rejects invalid model_type", {
   # Test invalid model_type
   expect_error(
     hapr_first_stage(y = y, gc = gc, w = w, model_type = "invalid"),
-    "model_type must be one of: 'lm', 'probit'"
+    "model_type must be one of: 'lm', 'probit', 'mle'"
   )
   
   expect_error(
     hapr_first_stage(y = y, gc = gc, w = w, model_type = "cox"),
-    "model_type must be one of: 'lm', 'probit'"
+    "model_type must be one of: 'lm', 'probit', 'mle'"
   )
 })
 

@@ -4,25 +4,17 @@
 \alias{hapr_second_stage}
 \title{HAPR second stage fit}
 \usage{
-hapr_second_stage(
-  first_stage,
-  improvement_ratio = NULL,
-  r2_current = NULL,
-  r2_future = NULL
-)
+hapr_second_stage(first_stage, improvement_ratio)
 }
 \arguments{
 \item{first_stage}{A hapr_first_stage_fit object}
 
-\item{improvement_ratio}{The ratio to extrapolate by}
-
-\item{r2_current}{The R-squared of the current fit}
-
-\item{r2_future}{The R-squared of the future fit}
+\item{improvement_ratio}{The ratio to extrapolate by (required)}
 }
 \value{
 A hapr_lm_fit object containing the results of the second stage
 }
 \description{
 Fits the full HARP model given the first stage fit and an improvement ratio.
+Uses manual Delta Method for standard errors.
 }

@@ -29,10 +29,10 @@ This design allows exploring different improvement ratios without re-running the
 
 ## Supported Models
 
-- **lm** (linear): Quantitative traits (height, education)
-- **probit**: Binary outcomes (disease status)
+- **Two-stage estimators**: `lm` (linear) and `probit`
+- **MLE estimators**: `lm` (development) and survival (`exponential`, `weibull`)
 
-Model-specific conversion formulas are in `calculate_parameters()` and `calculate_analytical_jacobian()`.
+Model-specific conversion formulas are in `calculate_parameters()` and `calculate_analytical_jacobian()` for two-stage estimators.
 
 ## Key Files
 
@@ -40,6 +40,10 @@ Model-specific conversion formulas are in `calculate_parameters()` and `calculat
 - `R/hapr_stage_1.R`: First stage estimation
 - `R/hapr_stage_2.R`: Second stage estimation, parameter conversion, delta method SEs
 - `R/lowlevel_regression.R`: Core regression functions (`fit_lm`, `fit_probit`)
+- `R/hapr_mle_lm.R`: MLE for linear model (development/testing)
+- `R/hapr_mle_survival.R`: MLE for parametric survival models
+- `src/hapr_mle_likelihood.cpp`: C++ linear MLE likelihood
+- `src/hapr_mle_survival_likelihood.cpp`: C++ survival MLE likelihoods
 - `R/preprocess.R`: Data preprocessing and validation
 - `R/predict.R`: Prediction methods for `hapr_fit` objects
 - `R/simulate.R`: Simulates data with both G_c and G_f
@@ -55,6 +59,7 @@ Model-specific conversion formulas are in `calculate_parameters()` and `calculat
 - **Testing**: Uses `testthat` - see `tests/testthat/` directory
 - **Local test runs**: Prefer `devtools::test()` to ensure local sources are loaded
 - **Test artifacts**: Write generated outputs to `tests/testthat/_artifacts` using `testthat::test_path()`
+- **Slow tests**: Gate large `n` scenarios behind `RUN_SLOW_TESTS=true`
 
 ## Theory References
 

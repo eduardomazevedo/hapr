@@ -4,15 +4,7 @@
 \alias{hapr}
 \title{Heritability adjusted prediction}
 \usage{
-hapr(
-  y,
-  gc,
-  w,
-  model_type,
-  improvement_ratio = NULL,
-  r2_current = NULL,
-  r2_future = NULL
-)
+hapr(y, gc, w, model_type, improvement_ratio)
 }
 \arguments{
 \item{y}{Outcome variable}
@@ -21,22 +13,15 @@ hapr(
 
 \item{w}{Control variables}
 
-\item{model_type}{Type of model to fit ("lm", "probit", "cox")}
+\item{model_type}{Type of model to fit ("lm" or "probit")}
 
 \item{improvement_ratio}{The ratio of R-squared of the future fit to the current fit.}
-
-\item{r2_current}{The R-squared of the current fit}
-
-\item{r2_future}{The R-squared of the future fit}
 }
 \value{
 A hapr_fit object.
 }
 \description{
-Fits the HARP model given the outcome y, PRS gc, and control variables w. User
-has to specify either an improvement ratio in expected increase of the
-gwas R-squared, or current R-squared and future expected R-squared.
-}
-\details{
-If the current R-squared is not provided, it will be computed from the data.
+Fits the HARP model given the outcome y, PRS gc, and control variables w.
+The improvement ratio specifies the expected increase in R-squared of the
+future GWAS relative to the current GWAS.
 }

@@ -41,10 +41,10 @@ fit <- hapr(y = outcome, gc = genetic_score, w = covariates,
             model_type = "lm", improvement_ratio = 2)
             
 # Simulate 100 observations using the same covariates
-sim_data <- simulate(fit, w = covariates, repetitions = 10)
+sim_data <- hapr_simulate(fit, w = covariates, repetitions = 10)
 
 # Simulate with provided genetic scores
-sim_data2 <- simulate(fit, w = covariates, gc = genetic_score)
+sim_data2 <- hapr_simulate(fit, w = covariates, gc = genetic_score)
 }
 
 }

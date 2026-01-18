@@ -7,6 +7,13 @@
 \description{
 What the package does (one paragraph).
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://eduardomazevedo.github.io/hapr}
+}
+
+}
 \author{
 \strong{Maintainer}: First Last \email{first.last@example.com}
 

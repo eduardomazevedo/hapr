@@ -21,8 +21,8 @@
 Defaults to \code{c('w', 'gc_w', 'gf_w')}: just covariates w, or combine them with gc or gf.}
 
 \item{type}{A character string indicating the type of prediction.
-- For \code{lm}/\code{probit}, defaults to \code{"response"}.
-- For \code{cox}, can be \code{"lp"} (linear predictor) or \code{"response"}/\code{"risk"} (exp of linear predictor).}
+- For \code{lm}, defaults to \code{"response"}.
+- For \code{probit}, can be \code{"response"} or \code{"link"} (linear predictor).}
 
 \item{...}{Additional arguments (currently ignored).}
 }
@@ -32,5 +32,5 @@ A data frame with the same rows as \code{newdata}, plus columns for predictions.
 \description{
 This function generates predictions using a fitted \code{hapr_fit} object.
 It computes predictions based on specified covariates, supporting
-linear (\code{lm}), \code{probit}, and \code{cox} regression.
+linear (\code{lm}) and \code{probit} regression.
 }
