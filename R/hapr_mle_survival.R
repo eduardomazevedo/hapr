@@ -13,6 +13,7 @@
 #' @param start_beta Named numeric vector for beta parameters (gf, (Intercept), w1, ...)
 #' @param start_delta Named numeric vector for additional parameters (optional);
 #'   for Weibull this should contain log_k.
+#' @param use_analytic_gradient Logical; if TRUE uses analytic gradients in optim.
 #' @param control List passed to stats::optim
 #'
 #' @return A hapr_mle_fit object with MLE estimates and diagnostics
@@ -26,10 +27,14 @@ hapr_mle_survival <- function(
     model_type = "exponential",
     start_beta,
     start_delta = NULL,
+    use_analytic_gradient = TRUE,
     control = list()) {
   model_type <- match.arg(model_type, c("exponential", "weibull"))
   if (missing(improvement_ratio) || is.null(improvement_ratio)) {
     stop("improvement_ratio must be specified.")
+  }
+  if (!is.logical(use_analytic_gradient) || length(use_analytic_gradient) != 1) {
+    stop("use_analytic_gradient must be a single logical value.")
   }
   if (is.null(start_beta) || !is.numeric(start_beta)) {
     stop("start_beta must be a numeric vector")
@@ -119,23 +124,44 @@ hapr_mle_survival <- function(
 
   X_w <- add_intercept(w)
   w_theta <- c(X_w %*% theta_hat)
-  neg_loglik <- make_hapr_mle_likelihood_survival(
-    event_time = event_time,
-    event_status = event_status,
-    gc = gc,
-    w_theta = w_theta,
-    X_w = X_w,
-    posterior = posterior,
-    model_type = model_type
-  )
+  if (use_analytic_gradient) {
+    neg_loglik <- make_hapr_mle_likelihood_survival_grad(
+      event_time = event_time,
+      event_status = event_status,
+      gc = gc,
+      w_theta = w_theta,
+      X_w = X_w,
+      posterior = posterior,
+      model_type = model_type
+    )
 
-  opt <- stats::optim(
-    par = start_params,
-    fn = neg_loglik,
-    method = "BFGS",
-    control = control,
-    hessian = TRUE
-  )
+    opt <- stats::optim(
+      par = start_params,
+      fn = neg_loglik$fn,
+      gr = neg_loglik$gr,
+      method = "BFGS",
+      control = control,
+      hessian = TRUE
+    )
+  } else {
+    neg_loglik <- make_hapr_mle_likelihood_survival(
+      event_time = event_time,
+      event_status = event_status,
+      gc = gc,
+      w_theta = w_theta,
+      X_w = X_w,
+      posterior = posterior,
+      model_type = model_type
+    )
+
+    opt <- stats::optim(
+      par = start_params,
+      fn = neg_loglik,
+      method = "BFGS",
+      control = control,
+      hessian = TRUE
+    )
+  }
 
   mle_params <- opt$par
   beta_hat <- mle_params[seq_len(nb)]
