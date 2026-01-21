@@ -1,5 +1,10 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::plugins(openmp)]]
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 namespace {
 constexpr int kNumNodes = 20;
@@ -27,7 +32,8 @@ Rcpp::List hapr_mle_survival_nll_split_grad_cpp(
     const arma::vec& avg_linpred_censor,
     const arma::mat& X_w_censor,
     double post_c,
-    int model_type) {
+    int model_type,
+    bool use_openmp) {
   auto log_exp_density = [](double time, double linpred) {
     const double rate = std::exp(linpred);
     return linpred - rate * time;
@@ -140,7 +146,9 @@ Rcpp::List hapr_mle_survival_nll_split_grad_cpp(
                             const double* x_ptr,
                             int n_rows,
                             int row_idx,
-                            bool is_event) {
+                            bool is_event,
+                            arma::vec& grad_ref,
+                            double& total_ll_ref) {
     double val[kNumNodes];
     double dlinpred[kNumNodes];
     double dlogk[kNumNodes];
@@ -187,7 +195,7 @@ Rcpp::List hapr_mle_survival_nll_split_grad_cpp(
       sum_exp += std::exp(val[j] - max_val);
     }
 
-    total_ll += max_val + std::log(sum_exp);
+    total_ll_ref += max_val + std::log(sum_exp);
     const double inv_sum = 1.0 / sum_exp;
 
     for (int j = 0; j < kNumNodes; ++j) {
@@ -195,34 +203,83 @@ Rcpp::List hapr_mle_survival_nll_split_grad_cpp(
       const double dlinpred_weight = weight * dlinpred[j];
       const double dlinpred_dbetag = avg_linpred + post_c * kNodes[j];
 
-      grad[0] += dlinpred_weight * dlinpred_dbetag;
+      grad_ref[0] += dlinpred_weight * dlinpred_dbetag;
       for (int col = 0; col < n_cols; ++col) {
-        grad[1 + col] += dlinpred_weight * x_ptr[row_idx + n_rows * col];
+        grad_ref[1 + col] += dlinpred_weight * x_ptr[row_idx + n_rows * col];
       }
       if (is_weibull) {
-        grad[n_cols + 1] += weight * dlogk[j];
+        grad_ref[n_cols + 1] += weight * dlogk[j];
       }
     }
   };
 
-  for (int i = 0; i < n_event; ++i) {
-    accumulate_obs(time_event_ptr[i],
-                   avg_event_ptr[i],
-                   xb_event_ptr[i],
-                   x_event_ptr,
-                   n_event,
-                   i,
-                   true);
-  }
+  bool run_parallel = false;
+#ifdef _OPENMP
+  run_parallel = use_openmp;
+#endif
 
-  for (int i = 0; i < n_censor; ++i) {
-    accumulate_obs(time_censor_ptr[i],
-                   avg_censor_ptr[i],
-                   xb_censor_ptr[i],
-                   x_censor_ptr,
-                   n_censor,
-                   i,
-                   false);
+  if (run_parallel) {
+#pragma omp parallel
+    {
+      arma::vec grad_local(params.n_elem, arma::fill::zeros);
+      double total_ll_local = 0.0;
+
+#pragma omp for nowait
+      for (int i = 0; i < n_event; ++i) {
+        accumulate_obs(time_event_ptr[i],
+                       avg_event_ptr[i],
+                       xb_event_ptr[i],
+                       x_event_ptr,
+                       n_event,
+                       i,
+                       true,
+                       grad_local,
+                       total_ll_local);
+      }
+
+#pragma omp for nowait
+      for (int i = 0; i < n_censor; ++i) {
+        accumulate_obs(time_censor_ptr[i],
+                       avg_censor_ptr[i],
+                       xb_censor_ptr[i],
+                       x_censor_ptr,
+                       n_censor,
+                       i,
+                       false,
+                       grad_local,
+                       total_ll_local);
+      }
+
+#pragma omp critical
+      {
+        total_ll += total_ll_local;
+        grad += grad_local;
+      }
+    }
+  } else {
+    for (int i = 0; i < n_event; ++i) {
+      accumulate_obs(time_event_ptr[i],
+                     avg_event_ptr[i],
+                     xb_event_ptr[i],
+                     x_event_ptr,
+                     n_event,
+                     i,
+                     true,
+                     grad,
+                     total_ll);
+    }
+
+    for (int i = 0; i < n_censor; ++i) {
+      accumulate_obs(time_censor_ptr[i],
+                     avg_censor_ptr[i],
+                     xb_censor_ptr[i],
+                     x_censor_ptr,
+                     n_censor,
+                     i,
+                     false,
+                     grad,
+                     total_ll);
+    }
   }
 
   if (!R_finite(total_ll)) {

@@ -64,6 +64,7 @@ inst/doc
 # Remotes
 data/
 output/
+dev/output/
 output_hrs/
 download_rap/
 

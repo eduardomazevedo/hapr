@@ -13,7 +13,7 @@ hapr_mle_survival_nll_split_cpp <- function(params, event_time, avg_linpred_even
     .Call(`_hapr_hapr_mle_survival_nll_split_cpp`, params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type)
 }
 
-hapr_mle_survival_nll_split_grad_cpp <- function(params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type) {
-    .Call(`_hapr_hapr_mle_survival_nll_split_grad_cpp`, params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type)
+hapr_mle_survival_nll_split_grad_cpp <- function(params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type, use_openmp) {
+    .Call(`_hapr_hapr_mle_survival_nll_split_grad_cpp`, params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type, use_openmp)
 }
 

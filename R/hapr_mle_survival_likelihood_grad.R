@@ -5,7 +5,8 @@ make_hapr_mle_likelihood_survival_grad <- function(
     w_theta,
     X_w,
     posterior,
-    model_type) {
+    model_type,
+    use_openmp = TRUE) {
   avg_linpred <- posterior$a * gc + posterior$b * w_theta
   event_idx <- which(event_status == 1)
   censor_idx <- which(event_status == 0)
@@ -25,6 +26,9 @@ make_hapr_mle_likelihood_survival_grad <- function(
     X_w_censor <- X_w[0, , drop = FALSE]
   }
   model_id <- if (model_type == "exponential") 0L else 1L
+  if (!is.logical(use_openmp) || length(use_openmp) != 1) {
+    stop("use_openmp must be a single logical value.")
+  }
 
   nll_grad <- function(params) {
     hapr_mle_survival_nll_split_grad_cpp(
@@ -36,7 +40,8 @@ make_hapr_mle_likelihood_survival_grad <- function(
       avg_linpred_censor = avg_censor,
       X_w_censor = X_w_censor,
       post_c = posterior$c,
-      model_type = model_id
+      model_type = model_id,
+      use_openmp = use_openmp
     )
   }
 
