@@ -79,6 +79,10 @@ Icon?
 .RData
 .Rproj.user/
 
+# Compiled artifacts
+src/*.o
+src/*.so
+
 # Generated documentation files
 man/
 docs/pkgdown.yml
