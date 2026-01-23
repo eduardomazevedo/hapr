@@ -5,14 +5,6 @@ hapr_mle_lm_nll_cpp <- function(params, y, avg_linpred, X_w, post_c) {
     .Call(`_hapr_hapr_mle_lm_nll_cpp`, params, y, avg_linpred, X_w, post_c)
 }
 
-hapr_mle_survival_exp_nll_cpp <- function(params, event_time, event_status, avg_linpred, X_w, post_c) {
-    .Call(`_hapr_hapr_mle_survival_exp_nll_cpp`, params, event_time, event_status, avg_linpred, X_w, post_c)
-}
-
-hapr_mle_survival_nll_split_cpp <- function(params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type) {
-    .Call(`_hapr_hapr_mle_survival_nll_split_cpp`, params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type)
-}
-
 hapr_mle_survival_nll_split_grad_cpp <- function(params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type, use_openmp) {
     .Call(`_hapr_hapr_mle_survival_nll_split_grad_cpp`, params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type, use_openmp)
 }

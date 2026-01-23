@@ -13,7 +13,6 @@
 #' @param start_beta Named numeric vector for beta parameters (gf, (Intercept), w1, ...)
 #' @param start_delta Named numeric vector for additional parameters (optional);
 #'   for Weibull this should contain log_k.
-#' @param use_analytic_gradient Logical; if TRUE uses analytic gradients in optim.
 #' @param use_openmp Logical; if TRUE uses OpenMP in the analytic gradient.
 #' @param control List passed to stats::optim
 #'
@@ -28,15 +27,11 @@ hapr_mle_survival <- function(
     model_type = "exponential",
     start_beta,
     start_delta = NULL,
-    use_analytic_gradient = TRUE,
     use_openmp = TRUE,
     control = list()) {
   model_type <- match.arg(model_type, c("exponential", "weibull"))
   if (missing(improvement_ratio) || is.null(improvement_ratio)) {
     stop("improvement_ratio must be specified.")
-  }
-  if (!is.logical(use_analytic_gradient) || length(use_analytic_gradient) != 1) {
-    stop("use_analytic_gradient must be a single logical value.")
   }
   if (!is.logical(use_openmp) || length(use_openmp) != 1) {
     stop("use_openmp must be a single logical value.")
@@ -129,45 +124,25 @@ hapr_mle_survival <- function(
 
   X_w <- add_intercept(w)
   w_theta <- c(X_w %*% theta_hat)
-  if (use_analytic_gradient) {
-    neg_loglik <- make_hapr_mle_likelihood_survival_grad(
-      event_time = event_time,
-      event_status = event_status,
-      gc = gc,
-      w_theta = w_theta,
-      X_w = X_w,
-      posterior = posterior,
-      model_type = model_type,
-      use_openmp = use_openmp
-    )
+  neg_loglik <- make_hapr_mle_likelihood_survival_grad(
+    event_time = event_time,
+    event_status = event_status,
+    gc = gc,
+    w_theta = w_theta,
+    X_w = X_w,
+    posterior = posterior,
+    model_type = model_type,
+    use_openmp = use_openmp
+  )
 
-    opt <- stats::optim(
-      par = start_params,
-      fn = neg_loglik$fn,
-      gr = neg_loglik$gr,
-      method = "BFGS",
-      control = control,
-      hessian = TRUE
-    )
-  } else {
-    neg_loglik <- make_hapr_mle_likelihood_survival(
-      event_time = event_time,
-      event_status = event_status,
-      gc = gc,
-      w_theta = w_theta,
-      X_w = X_w,
-      posterior = posterior,
-      model_type = model_type
-    )
-
-    opt <- stats::optim(
-      par = start_params,
-      fn = neg_loglik,
-      method = "BFGS",
-      control = control,
-      hessian = TRUE
-    )
-  }
+  opt <- stats::optim(
+    par = start_params,
+    fn = neg_loglik$fn,
+    gr = neg_loglik$gr,
+    method = "BFGS",
+    control = control,
+    hessian = TRUE
+  )
 
   mle_params <- opt$par
   beta_hat <- mle_params[seq_len(nb)]
@@ -232,44 +207,4 @@ hapr_mle_survival <- function(
   result
 }
 
-make_hapr_mle_likelihood_survival <- function(
-    event_time,
-    event_status,
-    gc,
-    w_theta,
-    X_w,
-    posterior,
-    model_type) {
-  avg_linpred <- posterior$a * gc + posterior$b * w_theta
-  event_idx <- which(event_status == 1)
-  censor_idx <- which(event_status == 0)
 
-  event_time_event <- event_time[event_idx]
-  avg_event <- avg_linpred[event_idx]
-  X_w_event <- X_w[event_idx, , drop = FALSE]
-
-  censor_time <- event_time[censor_idx]
-  avg_censor <- avg_linpred[censor_idx]
-  X_w_censor <- X_w[censor_idx, , drop = FALSE]
-
-  if (length(event_idx) == 0) {
-    X_w_event <- X_w[0, , drop = FALSE]
-  }
-  if (length(censor_idx) == 0) {
-    X_w_censor <- X_w[0, , drop = FALSE]
-  }
-  model_id <- if (model_type == "exponential") 0L else 1L
-  function(params) {
-    hapr_mle_survival_nll_split_cpp(
-      params = params,
-      event_time = event_time_event,
-      avg_linpred_event = avg_event,
-      X_w_event = X_w_event,
-      censor_time = censor_time,
-      avg_linpred_censor = avg_censor,
-      X_w_censor = X_w_censor,
-      post_c = posterior$c,
-      model_type = model_id
-    )
-  }
-}
