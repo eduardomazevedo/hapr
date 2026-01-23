@@ -197,6 +197,8 @@ Rcpp::List hapr_mle_survival_nll_split_grad_cpp(
 
     total_ll_ref += max_val + std::log(sum_exp);
     const double inv_sum = 1.0 / sum_exp;
+    
+    double d_beta_w_sum = 0.0;
 
     for (int j = 0; j < kNumNodes; ++j) {
       const double weight = std::exp(val[j] - max_val) * inv_sum;
@@ -204,12 +206,15 @@ Rcpp::List hapr_mle_survival_nll_split_grad_cpp(
       const double dlinpred_dbetag = avg_linpred + post_c * kNodes[j];
 
       grad_ref[0] += dlinpred_weight * dlinpred_dbetag;
-      for (int col = 0; col < n_cols; ++col) {
-        grad_ref[1 + col] += dlinpred_weight * x_ptr[row_idx + n_rows * col];
-      }
+      
       if (is_weibull) {
         grad_ref[n_cols + 1] += weight * dlogk[j];
       }
+      d_beta_w_sum += dlinpred_weight;
+    }
+
+    for (int col = 0; col < n_cols; ++col) {
+      grad_ref[1 + col] += d_beta_w_sum * x_ptr[row_idx + n_rows * col];
     }
   };
 
