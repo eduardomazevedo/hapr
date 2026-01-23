@@ -13,7 +13,7 @@ hapr_first_stage(y, gc, w, model_type)
 
 \item{w}{Control variables (numeric matrix, must not include constant or linearly dependent columns)}
 
-\item{model_type}{"lm", "probit", or "mle"}
+\item{model_type}{"lm", "probit", or "mle" (used internally by hapr_mle_survival)}
 }
 \value{
 A hapr_first_stage_fit object containing the results of the first stage.
@@ -24,7 +24,8 @@ Fits the first stage of the HARP model given the outcome y, PRS gc, and control 
 \details{
 This returns a first stage fit, which does not need to assume an improvement ratio. Run
 hapr_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
-For model_type "mle", only the gc ~ w regression is run.
+For model_type "mle", only the gc ~ w regression is run (used internally by
+hapr_mle_survival).
 
 \strong{Coefficient Ordering:}
 The coefficients are returned in a specific order that stage 2 relies on:

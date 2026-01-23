@@ -6,8 +6,11 @@
 There is an enormous amount of ongoing research on the practical utility of polygenic scores. But polygenic scores improve at a fast pace, so that these results become stale quickly. HAPR takes **currently available data** + **heritability estimates** to fit a statistical model of how a future polygenic score will perform.
 
 Basic applications:
+
   - **Medicine**. A key question is to evaluate the clinical utility of polygenic risk scores, either on their own or in combination with other predictors. HAPR estimates predictive performance based both on currently available polygenic scores and on expected improvements as larger GWASs become available.
+  
   - **Genomic social science**. Studies often estimate the effect of the true genetic predictor on a trait. Regressions using a currently available noisy polygenic risk score underestimate the true effect. HAPR estimates the true effect of the genetic predictor on the trait using current data combined with heritability estimates.
+
   - **Insurance economics**. Making genetic predictions available may change both pricing and consumer decisions in insurance markets. HAPR can be used to estimate the predictive power of both current polygenic risk scores and also how this power is expected to change as larger GWASs become available.
 
 HAPR supports two-stage regression-based estimators for quantitative traits (linear) and binary traits (probit). It also provides two-stage MLE estimators for parametric survival models (exponential, Weibull).
@@ -123,19 +126,7 @@ head(risk_dataset)
 See the vignettes for more examples with quantitative traits and more advanced analysis.
 
 
-## Current repo structure
-
-The package's core function is `hapr`.
-
-Implementation uses a two-stage estimation approach:
-
-1. First stage (`hapr_first_stage`): Runs feasible regressions using available data, without incorporating the improvement ratio (expected future R² / current R²)
-
-2. Second stage (`hapr_second_stage`): Uses the improvement ratio to estimate the full model parameters
-
-This structure allows easy calculation of results under different heritability assumptions by varying the improvement ratio parameter in the second stage, without having to redo the first stage, which has the bulk of computations in the regression-based estimators.
-
-## Current functionality
+## Functionality
 Two-stage estimators can be run with `hapr()` or with `hapr_first_stage()` + `hapr_second_stage()`.
 - Two-stage regression-based estimators: lm, probit.
 - Two-stage MLE estimators: survival (exponential, Weibull).
