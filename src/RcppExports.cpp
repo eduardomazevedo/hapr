@@ -11,21 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// hapr_mle_lm_nll_cpp
-double hapr_mle_lm_nll_cpp(const arma::vec& params, const arma::vec& y, const arma::vec& avg_linpred, const arma::mat& X_w, double post_c);
-RcppExport SEXP _hapr_hapr_mle_lm_nll_cpp(SEXP paramsSEXP, SEXP ySEXP, SEXP avg_linpredSEXP, SEXP X_wSEXP, SEXP post_cSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type params(paramsSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type avg_linpred(avg_linpredSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type X_w(X_wSEXP);
-    Rcpp::traits::input_parameter< double >::type post_c(post_cSEXP);
-    rcpp_result_gen = Rcpp::wrap(hapr_mle_lm_nll_cpp(params, y, avg_linpred, X_w, post_c));
-    return rcpp_result_gen;
-END_RCPP
-}
 // hapr_mle_survival_nll_split_grad_cpp
 Rcpp::List hapr_mle_survival_nll_split_grad_cpp(const arma::vec& params, const arma::vec& event_time, const arma::vec& avg_linpred_event, const arma::mat& X_w_event, const arma::vec& censor_time, const arma::vec& avg_linpred_censor, const arma::mat& X_w_censor, double post_c, int model_type, bool use_openmp);
 RcppExport SEXP _hapr_hapr_mle_survival_nll_split_grad_cpp(SEXP paramsSEXP, SEXP event_timeSEXP, SEXP avg_linpred_eventSEXP, SEXP X_w_eventSEXP, SEXP censor_timeSEXP, SEXP avg_linpred_censorSEXP, SEXP X_w_censorSEXP, SEXP post_cSEXP, SEXP model_typeSEXP, SEXP use_openmpSEXP) {
@@ -48,7 +33,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_hapr_hapr_mle_lm_nll_cpp", (DL_FUNC) &_hapr_hapr_mle_lm_nll_cpp, 5},
     {"_hapr_hapr_mle_survival_nll_split_grad_cpp", (DL_FUNC) &_hapr_hapr_mle_survival_nll_split_grad_cpp, 10},
     {NULL, NULL, 0}
 };
