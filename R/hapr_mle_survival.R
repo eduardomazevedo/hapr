@@ -15,6 +15,7 @@
 #'   for Weibull this should contain log_k.
 #' @param use_analytic_gradient Logical; if TRUE uses analytic gradients in optim.
 #' @param use_openmp Logical; if TRUE uses OpenMP in the analytic gradient.
+#' @param use_optimized_gradient Logical; if TRUE uses the optimized C++ gradient function.
 #' @param control List passed to stats::optim
 #'
 #' @return A hapr_mle_fit object with MLE estimates and diagnostics
@@ -30,6 +31,7 @@ hapr_mle_survival <- function(
     start_delta = NULL,
     use_analytic_gradient = TRUE,
     use_openmp = TRUE,
+    use_optimized_gradient = FALSE,
     control = list()) {
   model_type <- match.arg(model_type, c("exponential", "weibull"))
   if (missing(improvement_ratio) || is.null(improvement_ratio)) {
@@ -40,6 +42,9 @@ hapr_mle_survival <- function(
   }
   if (!is.logical(use_openmp) || length(use_openmp) != 1) {
     stop("use_openmp must be a single logical value.")
+  }
+  if (!is.logical(use_optimized_gradient) || length(use_optimized_gradient) != 1) {
+    stop("use_optimized_gradient must be a single logical value.")
   }
   if (is.null(start_beta) || !is.numeric(start_beta)) {
     stop("start_beta must be a numeric vector")
@@ -138,7 +143,8 @@ hapr_mle_survival <- function(
       X_w = X_w,
       posterior = posterior,
       model_type = model_type,
-      use_openmp = use_openmp
+      use_openmp = use_openmp,
+      use_optimized_gradient = use_optimized_gradient
     )
 
     opt <- stats::optim(

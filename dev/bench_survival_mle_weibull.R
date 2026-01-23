@@ -66,18 +66,12 @@ for (i in seq_len(nrow(combos))) {
   n <- combos$n[i]
   p <- combos$p[i]
 
-  default_time <- benchmark_once(n, p, use_openmp = TRUE, use_analytic_gradient = TRUE)
-  no_openmp_time <- benchmark_once(n, p, use_openmp = FALSE, use_analytic_gradient = TRUE)
-  no_grad_time <- benchmark_once(n, p, use_openmp = FALSE, use_analytic_gradient = FALSE)
+  elapsed_time <- benchmark_once(n, p, use_openmp = TRUE, use_analytic_gradient = TRUE)
 
   results[[i]] <- data.frame(
     n = n,
     p = p,
-    default_s = default_time,
-    openmp_off_s = no_openmp_time,
-    analytic_off_s = no_grad_time,
-    openmp_speedup = no_openmp_time / default_time,
-    analytic_speedup = no_grad_time / default_time,
+    elapsed_s = elapsed_time,
     stringsAsFactors = FALSE
   )
 }

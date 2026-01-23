@@ -81,12 +81,33 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// hapr_mle_survival_nll_split_grad_cpp_optimized
+Rcpp::List hapr_mle_survival_nll_split_grad_cpp_optimized(const arma::vec& params, const arma::vec& event_time, const arma::vec& avg_linpred_event, const arma::mat& X_w_event, const arma::vec& censor_time, const arma::vec& avg_linpred_censor, const arma::mat& X_w_censor, double post_c, int model_type, bool use_openmp);
+RcppExport SEXP _hapr_hapr_mle_survival_nll_split_grad_cpp_optimized(SEXP paramsSEXP, SEXP event_timeSEXP, SEXP avg_linpred_eventSEXP, SEXP X_w_eventSEXP, SEXP censor_timeSEXP, SEXP avg_linpred_censorSEXP, SEXP X_w_censorSEXP, SEXP post_cSEXP, SEXP model_typeSEXP, SEXP use_openmpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type event_time(event_timeSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type avg_linpred_event(avg_linpred_eventSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X_w_event(X_w_eventSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type censor_time(censor_timeSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type avg_linpred_censor(avg_linpred_censorSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X_w_censor(X_w_censorSEXP);
+    Rcpp::traits::input_parameter< double >::type post_c(post_cSEXP);
+    Rcpp::traits::input_parameter< int >::type model_type(model_typeSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_openmp(use_openmpSEXP);
+    rcpp_result_gen = Rcpp::wrap(hapr_mle_survival_nll_split_grad_cpp_optimized(params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type, use_openmp));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_hapr_hapr_mle_lm_nll_cpp", (DL_FUNC) &_hapr_hapr_mle_lm_nll_cpp, 5},
     {"_hapr_hapr_mle_survival_exp_nll_cpp", (DL_FUNC) &_hapr_hapr_mle_survival_exp_nll_cpp, 6},
     {"_hapr_hapr_mle_survival_nll_split_cpp", (DL_FUNC) &_hapr_hapr_mle_survival_nll_split_cpp, 9},
     {"_hapr_hapr_mle_survival_nll_split_grad_cpp", (DL_FUNC) &_hapr_hapr_mle_survival_nll_split_grad_cpp, 10},
+    {"_hapr_hapr_mle_survival_nll_split_grad_cpp_optimized", (DL_FUNC) &_hapr_hapr_mle_survival_nll_split_grad_cpp_optimized, 10},
     {NULL, NULL, 0}
 };
 
