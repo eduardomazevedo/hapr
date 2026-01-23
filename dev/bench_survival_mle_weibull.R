@@ -24,7 +24,7 @@ beta_g <- 0.6
 log_k <- 0.5
 censor_rate <- 0.2
 
-benchmark_once <- function(n, p, use_openmp, use_analytic_gradient) {
+benchmark_once <- function(n, p, use_openmp) {
   beta_w <- c(0.1, rep(0.05, p))
   theta <- c(0.0, rep(0.1, p))
 
@@ -51,7 +51,6 @@ benchmark_once <- function(n, p, use_openmp, use_analytic_gradient) {
       model_type = "weibull",
       start_beta = start_beta,
       start_delta = c(log_k = 0),
-      use_analytic_gradient = use_analytic_gradient,
       use_openmp = use_openmp,
       control = list(maxit = 150)
     )
@@ -66,7 +65,7 @@ for (i in seq_len(nrow(combos))) {
   n <- combos$n[i]
   p <- combos$p[i]
 
-  elapsed_time <- benchmark_once(n, p, use_openmp = TRUE, use_analytic_gradient = TRUE)
+  elapsed_time <- benchmark_once(n, p, use_openmp = TRUE)
 
   results[[i]] <- data.frame(
     n = n,
