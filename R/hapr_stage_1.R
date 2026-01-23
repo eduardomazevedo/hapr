@@ -6,7 +6,8 @@
 #' @details
 #' This returns a first stage fit, which does not need to assume an improvement ratio. Run
 #' hapr_second_stage(first_stage_fit, improvement_ratio) to specify an improvement ratio and get the full model.
-#' For model_type "mle", only the gc ~ w regression is run.
+#' For model_type "mle", only the gc ~ w regression is run (used internally by
+#' hapr_mle_survival).
 #' 
 #' **Coefficient Ordering:**
 #' The coefficients are returned in a specific order that stage 2 relies on:
@@ -17,7 +18,7 @@
 #' @param y Outcome variable. For "lm": numeric vector. For "probit": logical vector.
 #' @param gc Polygenic risk score (numeric vector, will be normalized)
 #' @param w Control variables (numeric matrix, must not include constant or linearly dependent columns)
-#' @param model_type "lm", "probit", or "mle"
+#' @param model_type "lm", "probit", or "mle" (used internally by hapr_mle_survival)
 #'
 #' @return A hapr_first_stage_fit object containing the results of the first stage.
 #' @export

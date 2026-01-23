@@ -10,7 +10,7 @@ Basic applications:
   - **Genomic social science**. Studies often estimate the effect of the true genetic predictor on a trait. Regressions using a currently available noisy polygenic risk score underestimate the true effect. HAPR estimates the true effect of the genetic predictor on the trait using current data combined with heritability estimates.
   - **Insurance economics**. Making genetic predictions available may change both pricing and consumer decisions in insurance markets. HAPR can be used to estimate the predictive power of both current polygenic risk scores and also how this power is expected to change as larger GWASs become available.
 
-HAPR supports two-stage estimators for quantitative traits (linear) and binary traits (probit). It also provides MLE estimators for linear models (development use) and parametric survival models (exponential, Weibull).
+HAPR supports two-stage regression-based estimators for quantitative traits (linear) and binary traits (probit). It also provides two-stage MLE estimators for parametric survival models (exponential, Weibull).
 
 ## Installation
 
@@ -136,6 +136,7 @@ Implementation uses a two-stage estimation approach:
 This structure allows easy calculation of results under different heritability assumptions by varying the improvement ratio parameter in the second stage, without having to redo the first stage, which has the bulk of computations in the regression-based estimators.
 
 ## Current functionality
+Two-stage estimators can be run with `hapr()` or with `hapr_first_stage()` + `hapr_second_stage()`.
 - Two-stage regression-based estimators: lm, probit.
-- Two-stage MLE estimators: survival (exponential, Weibull); lm (only for testing).
+- Two-stage MLE estimators: survival (exponential, Weibull).
 - Estimation (`hapr`, `hapr_mle_survival`), simulation (`hapr_simulate`), prediction (`predict`).
