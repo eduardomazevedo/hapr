@@ -5,7 +5,3 @@ hapr_mle_survival_gamma_nll_split_grad_cpp <- function(params, event_time, gc_ev
     .Call(`_hapr_hapr_mle_survival_gamma_nll_split_grad_cpp`, params, event_time, gc_event, X_w_event, censor_time, gc_censor, X_w_censor, post_c_over_a, model_type, use_openmp)
 }
 
-hapr_mle_survival_nll_split_grad_cpp <- function(params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type, use_openmp) {
-    .Call(`_hapr_hapr_mle_survival_nll_split_grad_cpp`, params, event_time, avg_linpred_event, X_w_event, censor_time, avg_linpred_censor, X_w_censor, post_c, model_type, use_openmp)
-}
-

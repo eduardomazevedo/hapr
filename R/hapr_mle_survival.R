@@ -74,12 +74,6 @@ hapr_mle_survival <- function(
   gc <- first_stage$preprocessed$gc
   w <- first_stage$preprocessed$w
 
-  add_intercept <- function(X) {
-    X_with_int <- cbind(1, X)
-    colnames(X_with_int)[1] <- "(Intercept)"
-    X_with_int
-  }
-
   theta_hat <- first_stage$parameters$theta
   var_v_plus_var_epsilon <- first_stage$parameters$var_v_plus_var_epsilon
   max_improvement_ratio <- first_stage$stats$max_improvement_ratio
@@ -120,91 +114,24 @@ hapr_mle_survival <- function(
     names(start_delta) <- "log_k"
   }
 
-  start_params <- c(start_beta, start_delta)
+  # Convert start_beta -> start_gamma for gamma-parameterized likelihood
+  start_gamma <- start_beta
+  start_gamma["gf"] <- start_beta["gf"] * posterior$a
+  if (nb > 1) {
+    start_gamma[-1] <- start_beta[-1] + start_beta["gf"] * posterior$b * theta_hat
+  }
+  names(start_gamma)[1] <- "gc"
 
-  X_w <- add_intercept(w)
-  w_theta <- c(X_w %*% theta_hat)
-  neg_loglik <- make_hapr_mle_likelihood_survival_grad(
+  hapr_mle_survival_gamma(
     event_time = event_time,
     event_status = event_status,
     gc = gc,
-    w_theta = w_theta,
-    X_w = X_w,
-    posterior = posterior,
+    w = w,
+    improvement_ratio = improvement_ratio,
     model_type = model_type,
-    use_openmp = use_openmp
+    start_gamma = start_gamma,
+    start_delta = start_delta,
+    use_openmp = use_openmp,
+    control = control
   )
-
-  opt <- stats::optim(
-    par = start_params,
-    fn = neg_loglik$fn,
-    gr = neg_loglik$gr,
-    method = "BFGS",
-    control = control,
-    hessian = TRUE
-  )
-
-  mle_params <- opt$par
-  beta_hat <- mle_params[seq_len(nb)]
-  names(beta_hat) <- beta_names
-  if (length(mle_params) > nb) {
-    delta_hat <- as.list(mle_params[(nb + 1):length(mle_params)])
-    names(delta_hat) <- names(start_delta)
-  } else {
-    delta_hat <- list()
-  }
-
-  vcov_all <- NULL
-  standard_errors <- NULL
-  ci_beta <- NULL
-  if (is.matrix(opt$hessian)) {
-    vcov_try <- try(solve(opt$hessian), silent = TRUE)
-    if (!inherits(vcov_try, "try-error")) {
-      dimnames(vcov_try) <- list(names(mle_params), names(mle_params))
-      vcov_all <- vcov_try
-      standard_errors <- sqrt(diag(vcov_all))[seq_len(nb)]
-      names(standard_errors) <- beta_names
-      z <- stats::qnorm(0.975)
-      ci_beta <- data.frame(
-        Estimate = beta_hat,
-        Std.Error = standard_errors,
-        Lower = beta_hat - z * standard_errors,
-        Upper = beta_hat + z * standard_errors,
-        row.names = beta_names,
-        check.names = FALSE
-      )
-    }
-  }
-
-  result <- list(
-    model_type = sprintf("mle_survival_%s", model_type),
-    regressions = list(gc_on_w = first_stage$regressions$gc_on_w),
-    parameters = list(
-      beta = beta_hat,
-      delta = delta_hat,
-      theta = theta_hat,
-      var_v_plus_var_epsilon = var_v_plus_var_epsilon
-    ),
-    vcov_parameters = list(
-      all = vcov_all,
-      order = list(
-        beta = seq_len(nb),
-        delta = if (length(mle_params) > nb) (nb + 1):length(mle_params) else integer(0)
-      )
-    ),
-    standard_errors = standard_errors,
-    ci_beta = ci_beta,
-    stats = list(
-      var_v = var_v,
-      var_epsilon = var_epsilon,
-      posterior = posterior,
-      improvement_ratio = improvement_ratio,
-      max_improvement_ratio = max_improvement_ratio
-    ),
-    opt = opt
-  )
-  class(result) <- "hapr_mle_fit"
-  result
 }
-
-
