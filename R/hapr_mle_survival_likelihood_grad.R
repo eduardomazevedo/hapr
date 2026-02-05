@@ -1,4 +1,4 @@
-make_hapr_mle_likelihood_survival_gamma_grad <- function(
+make_hapr_mle_likelihood_survival_grad <- function(
     event_time,
     event_status,
     gc,
