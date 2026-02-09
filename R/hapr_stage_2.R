@@ -55,28 +55,50 @@ hapr_second_stage <- function(first_stage,
   gamma_hat <- first_stage$coefficients$gamma
   theta_hat <- first_stage$coefficients$theta
 
-  # canonical order for delta method
-  param_names <- c(names(gamma_hat), names(theta_hat))
-  param_hat   <- stats::setNames(c(gamma_hat, theta_hat), param_names)
-
   Vg <- first_stage$coefficients$vcov_gamma
   Vt <- first_stage$coefficients$vcov_theta
   ng <- length(gamma_hat); nt <- length(theta_hat)
 
-  vcov_full <- matrix(0, ng + nt, ng + nt)
-  rownames(vcov_full) <- colnames(vcov_full) <- param_names
-  vcov_full[names(gamma_hat), names(gamma_hat)] <- Vg
-  vcov_full[names(theta_hat), names(theta_hat)] <- Vt
+  if (first_stage$model_type %in% c("lm", "probit")) {
+    var_v_plus_var_epsilon_hat <- first_stage$stats$var_v_plus_var_epsilon
+    vcov_var_v_plus_var_epsilon <- first_stage$regressions$gc_on_w$var_sigma_squared
 
-  beta_wrapper <- function(par) {
-    gamma <- par[seq_len(ng)]; names(gamma) <- names(gamma_hat)
-    theta <- par[ng + seq_len(nt)]; names(theta) <- names(theta_hat)
-    calculate_beta(first_stage$model_type, list(gamma = gamma, theta = theta), posterior)
+    param_names <- c(names(gamma_hat), names(theta_hat), "var_v_plus_var_epsilon")
+    vcov_full <- matrix(0, ng + nt + 1, ng + nt + 1)
+    rownames(vcov_full) <- colnames(vcov_full) <- param_names
+    vcov_full[names(gamma_hat), names(gamma_hat)] <- Vg
+    vcov_full[names(theta_hat), names(theta_hat)] <- Vt
+    vcov_full["var_v_plus_var_epsilon", "var_v_plus_var_epsilon"] <- vcov_var_v_plus_var_epsilon
+
+    J <- calculate_analytical_jacobian(
+      model_type = first_stage$model_type,
+      gamma = gamma_hat,
+      theta = theta_hat,
+      var_total = var_v_plus_var_epsilon_hat,
+      posterior = posterior,
+      beta = beta,
+      derived_vars = list(var_epsilon = var_epsilon)
+    )
+  } else {
+    # canonical order for delta method
+    param_names <- c(names(gamma_hat), names(theta_hat))
+    param_hat   <- stats::setNames(c(gamma_hat, theta_hat), param_names)
+
+    vcov_full <- matrix(0, ng + nt, ng + nt)
+    rownames(vcov_full) <- colnames(vcov_full) <- param_names
+    vcov_full[names(gamma_hat), names(gamma_hat)] <- Vg
+    vcov_full[names(theta_hat), names(theta_hat)] <- Vt
+
+    beta_wrapper <- function(par) {
+      gamma <- par[seq_len(ng)]; names(gamma) <- names(gamma_hat)
+      theta <- par[ng + seq_len(nt)]; names(theta) <- names(theta_hat)
+      calculate_beta(first_stage$model_type, list(gamma = gamma, theta = theta), posterior)
+    }
+
+    J <- numDeriv::jacobian(beta_wrapper, param_hat)
+    rownames(J) <- names(beta_wrapper(param_hat))
+    colnames(J) <- param_names
   }
-
-  J <- numDeriv::jacobian(beta_wrapper, param_hat)
-  rownames(J) <- names(beta_wrapper(param_hat))
-  colnames(J) <- param_names
 
   vcov_beta <- J %*% vcov_full %*% t(J)
   sd_beta <- sqrt(diag(vcov_beta)); names(sd_beta) <- rownames(J)
@@ -178,4 +200,117 @@ calculate_beta <- function(model_type, coefficients, posterior) {
 
   names(beta)[i_gc] <- "gf"
   beta[order(names(beta))]
+}
+
+#' Calculate analytical Jacobian for delta-method SEs
+#'
+#' @keywords internal
+calculate_analytical_jacobian <- function(model_type, gamma, theta, var_total, posterior, beta, derived_vars) {
+  if (!model_type %in% c("lm", "probit")) {
+    stop("Analytical Jacobian only implemented for lm and probit.")
+  }
+
+  k <- derived_vars$var_epsilon
+  x <- var_total
+  a <- posterior$a
+  b <- posterior$b
+  c2 <- posterior$c^2
+
+  da_dx <- k / x^2
+  db_dx <- -k / x^2
+  dc2_dx <- k^2 / x^2
+
+  gamma_names <- names(gamma)
+  theta_names <- names(theta)
+  beta_names <- names(beta)
+
+  col_names <- c(gamma_names, theta_names, "var_v_plus_var_epsilon")
+  J <- matrix(0, nrow = length(beta_names), ncol = length(col_names))
+  rownames(J) <- beta_names
+  colnames(J) <- col_names
+
+  if (!"gc" %in% gamma_names) {
+    stop("Gamma must include 'gc' for analytical Jacobian.")
+  }
+  if (!"gf" %in% beta_names) {
+    stop("Beta must include 'gf' for analytical Jacobian.")
+  }
+
+  row_gf <- which(beta_names == "gf")
+  col_gc <- which(gamma_names == "gc")
+  col_vt <- length(col_names)
+
+  gamma_gc <- as.numeric(gamma["gc"])
+  beta_gc <- as.numeric(beta["gf"])
+
+  gamma_other_names <- setdiff(gamma_names, "gc")
+  theta_other_names <- setdiff(theta_names, "(Intercept)")
+  common_names <- intersect(gamma_other_names, theta_other_names)
+
+  if (model_type == "lm") {
+    dBg_dgg <- 1 / a
+    dBg_dx <- -gamma_gc / (a^2) * da_dx
+
+    J[row_gf, col_gc] <- dBg_dgg
+    J[row_gf, col_vt] <- dBg_dx
+
+    if (length(gamma_other_names)) {
+      for (gname in gamma_other_names) {
+        row_g <- which(beta_names == gname)
+        col_g <- which(gamma_names == gname)
+
+        J[row_g, col_g] <- 1
+
+        if (gname %in% common_names) {
+          theta_g <- as.numeric(theta[gname])
+          col_t <- length(gamma_names) + which(theta_names == gname)
+
+          J[row_g, col_gc] <- -theta_g * (b / a)
+          J[row_g, col_t] <- -beta_gc * b
+          J[row_g, col_vt] <- -theta_g * (db_dx * beta_gc + b * dBg_dx)
+        }
+      }
+    }
+  } else if (model_type == "probit") {
+    D_sq <- a^2 - (gamma_gc^2) * c2
+    if (D_sq <= 0) {
+      stop("Invalid posterior parameters: sqrt_input is non-positive")
+    }
+    D <- sqrt(D_sq)
+
+    dBg_dgg <- (a^2) / (D^3)
+    dD_dx <- (1 / D) * (a * da_dx - 0.5 * gamma_gc^2 * dc2_dx)
+    dBg_dx <- (-gamma_gc / D_sq) * dD_dx
+
+    J[row_gf, col_gc] <- dBg_dgg
+    J[row_gf, col_vt] <- dBg_dx
+
+    S <- sqrt(1 + c2 * beta_gc^2)
+    dS_dgg <- (c2 * beta_gc / S) * dBg_dgg
+    dS_dx <- (1 / (2 * S)) * (dc2_dx * beta_gc^2 + 2 * c2 * beta_gc * dBg_dx)
+
+    if (length(gamma_other_names)) {
+      for (gname in gamma_other_names) {
+        row_g <- which(beta_names == gname)
+        col_g <- which(gamma_names == gname)
+        gamma_g <- as.numeric(gamma[gname])
+
+        J[row_g, col_g] <- S
+        J[row_g, col_gc] <- gamma_g * dS_dgg
+        J[row_g, col_vt] <- gamma_g * dS_dx
+
+        if (gname %in% common_names) {
+          theta_g <- as.numeric(theta[gname])
+          col_t <- length(gamma_names) + which(theta_names == gname)
+
+          J[row_g, col_gc] <- J[row_g, col_gc] - b * theta_g * dBg_dgg
+          J[row_g, col_t] <- -b * beta_gc
+          J[row_g, col_vt] <- J[row_g, col_vt] -
+            theta_g * (db_dx * beta_gc + b * dBg_dx)
+        }
+      }
+    }
+  }
+
+  J
 }

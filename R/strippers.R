@@ -14,6 +14,7 @@
 #'   \item explained_variance: Variance of fitted values
 #'   \item sigma_squared: Residual variance
 #'   \item var_outcome: Variance of the outcome variable
+#'   \item var_sigma_squared: Variance of the sigma^2 estimator
 #'   \item stripped_model: A trimmed version of the original model object
 #' }
 #'
@@ -39,6 +40,8 @@ strip_lm <- function(fit) {
 
   # Residual variance (sigma^2)
   sigma_squared <- summary(fit)$sigma^2
+  df_residual <- fit$df.residual
+  var_sigma_squared <- 2 * (sigma_squared^2) / df_residual
 
   # Variance of outcome variable
   outcome_variance <- var(fitted_values + residuals(fit))
@@ -65,6 +68,7 @@ strip_lm <- function(fit) {
     explained_variance = explained_variance,
     sigma_squared = sigma_squared,
     var_outcome = outcome_variance,
+    var_sigma_squared = var_sigma_squared,
     stripped_model = fit
   )
 }
