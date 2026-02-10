@@ -49,7 +49,7 @@ aggregate_coverage_artifacts <- function(
   combined <- do.call(rbind, lapply(csv_paths, function(path) {
     scenario <- sub("_summary\\.csv$", "", basename(path))
     suite <- basename(dirname(path))
-    summary_table <- read.csv(path, stringsAsFactors = FALSE)
+    summary_table <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
     meta <- parse_scenario(scenario)
 
     meta_table <- data.frame(
@@ -62,10 +62,19 @@ aggregate_coverage_artifacts <- function(
       stringsAsFactors = FALSE
     )
 
+    # Ensure numeric columns stay numeric
+    for (col in names(summary_table)) {
+      if (grepl("^(True_Value|Mean_Estimate|Mean_SE|SD_Estimate|SE_SD_Ratio|Coverage)$", col)) {
+        summary_table[[col]] <- as.numeric(summary_table[[col]])
+      }
+    }
+
     meta_table <- meta_table[rep(1, nrow(summary_table)), , drop = FALSE]
-    cbind(meta_table, summary_table)
+    rownames(meta_table) <- NULL
+    cbind(meta_table, summary_table, row.names = NULL)
   }))
 
+  rownames(combined) <- NULL
   write.csv(combined, output_file, row.names = FALSE)
   invisible(combined)
 }

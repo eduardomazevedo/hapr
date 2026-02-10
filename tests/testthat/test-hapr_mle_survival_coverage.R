@@ -16,7 +16,7 @@ test_that("Survival MLE coverage intervals are above 85%", {
   CENSOR_RATE <- 0.2
 
   VAR_EPSILON_VALUES <- c(0.5, 0.6, 0.7, 0.8, 0.9)
-  N_VALUES <- c(1e3, 1e4)
+  N_VALUES <- c(1e3, 1e4, 1e5)
   MODEL_TYPES <- c("exponential", "weibull")
   LOG_K_VALUES <- c(0)
   N_SIMULATIONS <- 100
