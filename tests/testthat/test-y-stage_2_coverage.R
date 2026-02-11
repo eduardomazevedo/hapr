@@ -2,7 +2,7 @@
 #' 
 #' Runs 100 simulations per scenario and checks that coverage is above 85%
 #' for all parameters. Tests the same scenarios as point estimate tests.
-#' Produces artifact tables and histograms.
+#' Produces artifact tables.
 #' 
 #' This test is slow and will only run if the environment variable
 #' RUN_SLOW_TESTS is set to "true" or "TRUE".

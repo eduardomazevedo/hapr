@@ -240,46 +240,6 @@ run_stage2_tests <- function(test_type,
       )
 
       write_summary_csv(artifact_dir, paste0(scenario$name, "_summary.csv"), summary_table)
-
-      for (coef_name in names(true_coef)) {
-        estimates_vec <- all_estimates[, coef_name]
-        estimates_vec <- estimates_vec[!is.na(estimates_vec)]
-
-        if (length(estimates_vec) > 0) {
-          png_file <- file.path(artifact_dir, paste0(scenario$name, "_", coef_name, "_hist.png"))
-          png(png_file, width = 800, height = 600, res = 100)
-
-          h <- hist(estimates_vec,
-                    main = sprintf("%s: %s\nTrue=%.3f, Mean=%.3f, Coverage=%.1f%%",
-                                   scenario$name, coef_name,
-                                   true_coef[coef_name], mean_estimates[coef_name],
-                                   coverage[coef_name] * 100),
-                    xlab = "Estimate",
-                    ylab = "Frequency",
-                    breaks = 20,
-                    col = "lightblue",
-                    border = "black")
-
-          abline(v = true_coef[coef_name], col = "red", lwd = 2, lty = 2)
-          abline(v = mean_estimates[coef_name], col = "blue", lwd = 2, lty = 2)
-
-          max_count <- max(h$counts)
-          arrows(mean_lower_ci[coef_name], max_count * 0.9,
-                 mean_upper_ci[coef_name], max_count * 0.9,
-                 code = 3, angle = 90, length = 0.1, col = "green", lwd = 3)
-
-          legend("topright",
-                 legend = c(sprintf("True: %.3f", true_coef[coef_name]),
-                            sprintf("Mean: %.3f", mean_estimates[coef_name]),
-                            sprintf("Mean 95%% CI: [%.3f, %.3f]",
-                                    mean_lower_ci[coef_name], mean_upper_ci[coef_name])),
-                 col = c("red", "blue", "green"),
-                 lty = c(2, 2, 1),
-                 lwd = c(2, 2, 3))
-
-          dev.off()
-        }
-      }
     }
   }
 

@@ -2,8 +2,8 @@ url: https://eduardomazevedo.github.io/hapr
 
 template:
   bootstrap: 5
-  params:
-    logo: man/figures/logo.svg
+  # params:
+  #   logo: man/figures/logo.svg
 home:
   title: "HAPR: Heritability-Adjusted Risk Prediction"
   strip_header: true
