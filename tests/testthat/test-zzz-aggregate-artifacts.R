@@ -4,7 +4,8 @@ test_that("Aggregate coverage artifacts", {
     skip("Aggregation skipped. Set RUN_SLOW_TESTS=true to run.")
   }
 
-  dev_script <- file.path(getwd(), "dev", "aggregate_artifacts.R")
+  pkg_root <- testthat::test_path("..", "..")
+  dev_script <- file.path(pkg_root, "dev", "aggregate_artifacts.R")
   if (!file.exists(dev_script)) {
     skip("Aggregation script not found.")
   }
