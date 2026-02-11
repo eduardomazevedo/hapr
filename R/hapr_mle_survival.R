@@ -10,9 +10,12 @@
 #' @param w Covariate matrix (no intercept column)
 #' @param improvement_ratio R-squared improvement ratio (required)
 #' @param model_type One of "exponential" or "weibull"
-#' @param start_beta Named numeric vector for beta parameters (gf, (Intercept), w1, ...)
+#' @param start_beta Optional named numeric vector for beta parameters
+#'   (gf, (Intercept), w1, ...). If omitted, a data-driven initialization is used.
 #' @param start_delta Named numeric vector for additional parameters (optional);
 #'   for Weibull this should contain log_k.
+#' @param start_gamma_method Method for initializing gamma parameters.
+#'   One of "auto", "beta_transform", or "log_time_lm".
 #' @param use_openmp Logical; if TRUE uses OpenMP in the analytic gradient.
 #' @param control List passed to stats::optim
 #'
@@ -25,18 +28,20 @@ hapr_mle_survival <- function(
     w,
     improvement_ratio,
     model_type = "exponential",
-    start_beta,
+    start_beta = NULL,
     start_delta = NULL,
+    start_gamma_method = c("auto", "beta_transform", "log_time_lm"),
     use_openmp = TRUE,
     control = list()) {
   model_type <- match.arg(model_type, c("exponential", "weibull"))
+  start_gamma_method <- match.arg(start_gamma_method)
   if (missing(improvement_ratio) || is.null(improvement_ratio)) {
     stop("improvement_ratio must be specified.")
   }
   if (!is.logical(use_openmp) || length(use_openmp) != 1) {
     stop("use_openmp must be a single logical value.")
   }
-  if (is.null(start_beta) || !is.numeric(start_beta)) {
+  if (!is.null(start_beta) && !is.numeric(start_beta)) {
     stop("start_beta must be a numeric vector")
   }
   if (!is.numeric(event_time)) {
@@ -96,8 +101,10 @@ hapr_mle_survival <- function(
 
   nb <- ncol(w) + 2
   beta_names <- c("gf", "(Intercept)", colnames(w))
-  if (length(start_beta) != nb) {
-    stop(sprintf("start_beta must have length %d.", nb))
+  if (is.null(start_beta)) {
+    start_beta <- rep(0, nb)
+  } else if (length(start_beta) != nb) {
+    stop(sprintf("start_beta must have length %d when provided.", nb))
   }
   names(start_beta) <- beta_names
 
@@ -120,12 +127,47 @@ hapr_mle_survival <- function(
     names(start_delta) <- "log_k"
   }
 
-  start_gamma <- start_beta
-  start_gamma["gf"] <- start_beta["gf"] * posterior$a
-  if (nb > 1) {
-    start_gamma[-1] <- start_beta[-1] + start_beta["gf"] * posterior$b * theta_hat
+  get_start_gamma_from_beta <- function() {
+    start_gamma <- start_beta
+    start_gamma["gf"] <- start_beta["gf"] * posterior$a
+    if (nb > 1) {
+      start_gamma[-1] <- start_beta[-1] + start_beta["gf"] * posterior$b * theta_hat
+    }
+    names(start_gamma)[1] <- "gc"
+    start_gamma
   }
-  names(start_gamma)[1] <- "gc"
+
+  get_start_gamma_from_log_time <- function() {
+    signed_log_time <- log(pmax(event_time, .Machine$double.xmin))
+    if (model_type == "exponential") {
+      signed_log_time <- -signed_log_time
+    }
+    x_gc_w <- cbind(gc = gc, `(Intercept)` = 1, w)
+    fit <- stats::lm.fit(x = x_gc_w, y = signed_log_time)
+    coef <- fit$coefficients
+    if (length(coef) != nb) {
+      return(NULL)
+    }
+    coef[is.na(coef)] <- 0
+    if (any(!is.finite(coef))) {
+      return(NULL)
+    }
+    names(coef) <- c("gc", "(Intercept)", colnames(w))
+    coef
+  }
+
+  start_gamma <- switch(
+    start_gamma_method,
+    beta_transform = get_start_gamma_from_beta(),
+    log_time_lm = {
+      log_time_start <- get_start_gamma_from_log_time()
+      if (is.null(log_time_start)) get_start_gamma_from_beta() else log_time_start
+    },
+    auto = {
+      log_time_start <- get_start_gamma_from_log_time()
+      if (is.null(log_time_start)) get_start_gamma_from_beta() else log_time_start
+    }
+  )
 
   start_params <- c(start_gamma, start_delta)
 

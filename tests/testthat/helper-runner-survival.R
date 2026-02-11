@@ -43,7 +43,6 @@ run_survival_tests <- function(test_type,
         )
       }
 
-      start_beta <- rep(0, ncol(data$w) + 2)
       start_delta <- if (scenario$model_type == "weibull") c(log_k = 0) else numeric(0)
 
       mle_time <- system.time({
@@ -54,7 +53,6 @@ run_survival_tests <- function(test_type,
           w = data$w,
           improvement_ratio = scenario$improvement_ratio,
           model_type = scenario$model_type,
-          start_beta = start_beta,
           start_delta = start_delta,
           control = list(maxit = 150)
         ))
@@ -155,7 +153,6 @@ run_survival_tests <- function(test_type,
           )
         }
 
-        start_beta <- rep(0, ncol(data$w) + 2)
         start_delta <- if (scenario$model_type == "weibull") c(log_k = 0) else numeric(0)
 
         first_stage <- suppressWarnings(hapr_first_stage(
@@ -177,7 +174,6 @@ run_survival_tests <- function(test_type,
           w = data$w,
           improvement_ratio = scenario$improvement_ratio,
           model_type = scenario$model_type,
-          start_beta = start_beta,
           start_delta = start_delta,
           control = list(maxit = 150)
         ))

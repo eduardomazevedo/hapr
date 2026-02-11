@@ -66,8 +66,6 @@ test_that("Survival MLE runs without OpenMP", {
     censor_rate = 0.2
   )
 
-  start_beta <- rep(0, ncol(data$w) + 2)
-
   fit <- hapr_mle_survival(
     event_time = data$event_time,
     event_status = data$event_status,
@@ -75,7 +73,6 @@ test_that("Survival MLE runs without OpenMP", {
     w = data$w,
     improvement_ratio = improvement_ratio,
     model_type = "exponential",
-    start_beta = start_beta,
     start_delta = numeric(0),
     use_openmp = FALSE,
     control = list(maxit = 100)
@@ -83,4 +80,61 @@ test_that("Survival MLE runs without OpenMP", {
 
   expect_s3_class(fit, "hapr_mle_fit")
   expect_true(all(is.finite(fit$parameters$beta)))
+})
+
+test_that("Survival MLE start_gamma_method produces consistent solutions", {
+  set.seed(456)
+
+  n <- 300
+  var_epsilon <- 0.7
+  var_v <- (1 - var_epsilon) * 0.4
+  improvement_ratio <- 1 / (1 - var_epsilon)
+
+  beta_g <- 0.6
+  beta_w <- c(0.1, -0.2, 0.15, 0.05)
+  theta <- normalize_theta(
+    theta = c(0.0, 0.1, -0.25, 0.2),
+    var_v = var_v,
+    var_epsilon = var_epsilon
+  )
+
+  data <- mock_dataset_survival_weibull(
+    n = n,
+    var_v = var_v,
+    var_epsilon = var_epsilon,
+    beta_g = beta_g,
+    beta_w = beta_w,
+    theta = theta,
+    log_k = 0.2,
+    censor_rate = 0.2
+  )
+
+  start_delta <- c(log_k = 0)
+
+  fit_beta <- hapr_mle_survival(
+    event_time = data$event_time,
+    event_status = data$event_status,
+    gc = data$gc,
+    w = data$w,
+    improvement_ratio = improvement_ratio,
+    model_type = "weibull",
+    start_delta = start_delta,
+    start_gamma_method = "beta_transform",
+    control = list(maxit = 150)
+  )
+
+  fit_log_time <- hapr_mle_survival(
+    event_time = data$event_time,
+    event_status = data$event_status,
+    gc = data$gc,
+    w = data$w,
+    improvement_ratio = improvement_ratio,
+    model_type = "weibull",
+    start_delta = start_delta,
+    start_gamma_method = "log_time_lm",
+    control = list(maxit = 150)
+  )
+
+  expect_equal(fit_beta$opt$value, fit_log_time$opt$value, tolerance = 1e-5)
+  expect_equal(fit_beta$parameters$beta, fit_log_time$parameters$beta, tolerance = 1e-3)
 })
