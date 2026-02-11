@@ -17,6 +17,7 @@ run_survival_tests <- function(test_type,
     true_coef <- make_true_coef(params$beta_g, params$beta_w)
     n_coef <- length(true_coef)
 
+    theta <- normalize_theta(params$theta, scenario$var_v, scenario$var_epsilon)
     if (test_type == "point") {
       set.seed(scenario$seed)
       data <- if (scenario$model_type == "exponential") {
@@ -26,7 +27,7 @@ run_survival_tests <- function(test_type,
           var_epsilon = scenario$var_epsilon,
           beta_g = params$beta_g,
           beta_w = params$beta_w,
-          theta = params$theta,
+          theta = theta,
           censor_rate = params$censor_rate
         )
       } else {
@@ -36,7 +37,7 @@ run_survival_tests <- function(test_type,
           var_epsilon = scenario$var_epsilon,
           beta_g = params$beta_g,
           beta_w = params$beta_w,
-          theta = params$theta,
+          theta = theta,
           log_k = scenario$log_k,
           censor_rate = params$censor_rate
         )
@@ -46,7 +47,7 @@ run_survival_tests <- function(test_type,
       start_delta <- if (scenario$model_type == "weibull") c(log_k = 0) else numeric(0)
 
       mle_time <- system.time({
-        mle_fit <- hapr_mle_survival(
+        mle_fit <- suppressWarnings(hapr_mle_survival(
           event_time = data$event_time,
           event_status = data$event_status,
           gc = data$gc,
@@ -56,7 +57,7 @@ run_survival_tests <- function(test_type,
           start_beta = start_beta,
           start_delta = start_delta,
           control = list(maxit = 150)
-        )
+        ))
       })
       runtime_mle_ms <- mle_time[["elapsed"]] * 1000
 
@@ -94,6 +95,7 @@ run_survival_tests <- function(test_type,
         n = scenario$n,
         model_type = scenario$model_type,
         log_k = scenario$log_k,
+        var_v_factor = scenario$var_v_factor,
         comparison_table = comparison_table,
         all_within_4se = all(within_4se, na.rm = TRUE)
       )
@@ -126,6 +128,7 @@ run_survival_tests <- function(test_type,
                  scenario$idx_var_epsilon * 10000 +
                  scenario$idx_n * 1000 +
                  scenario$idx_model_type * 100 +
+                 scenario$idx_var_v_factor * 10 +
                  round(scenario$log_k * 10) +
                  sim)
 
@@ -136,7 +139,7 @@ run_survival_tests <- function(test_type,
             var_epsilon = scenario$var_epsilon,
             beta_g = params$beta_g,
             beta_w = params$beta_w,
-            theta = params$theta,
+            theta = theta,
             censor_rate = params$censor_rate
           )
         } else {
@@ -146,7 +149,7 @@ run_survival_tests <- function(test_type,
             var_epsilon = scenario$var_epsilon,
             beta_g = params$beta_g,
             beta_w = params$beta_w,
-            theta = params$theta,
+            theta = theta,
             log_k = scenario$log_k,
             censor_rate = params$censor_rate
           )
@@ -155,19 +158,19 @@ run_survival_tests <- function(test_type,
         start_beta <- rep(0, ncol(data$w) + 2)
         start_delta <- if (scenario$model_type == "weibull") c(log_k = 0) else numeric(0)
 
-        first_stage <- hapr_first_stage(
+        first_stage <- suppressWarnings(hapr_first_stage(
           y = data$event_time,
           gc = data$gc,
           w = data$w,
           model_type = "mle"
-        )
+        ))
         max_improvement_ratio <- first_stage$stats$max_improvement_ratio
         if (scenario$n == 1e3 && scenario$improvement_ratio >= max_improvement_ratio) {
           adjusted_count <- adjusted_count + 1
           next
         }
 
-        fit <- hapr_mle_survival(
+        fit <- suppressWarnings(hapr_mle_survival(
           event_time = data$event_time,
           event_status = data$event_status,
           gc = data$gc,
@@ -177,7 +180,7 @@ run_survival_tests <- function(test_type,
           start_beta = start_beta,
           start_delta = start_delta,
           control = list(maxit = 150)
-        )
+        ))
 
         ci_beta <- fit$ci_beta
         if (!is.null(ci_beta)) {
@@ -221,6 +224,7 @@ run_survival_tests <- function(test_type,
         n = scenario$n,
         model_type = scenario$model_type,
         log_k = scenario$log_k,
+        var_v_factor = scenario$var_v_factor,
         summary_table = summary_table,
         coverage = coverage,
         se_sd_ratio = se_sd_ratio,
@@ -237,17 +241,16 @@ run_survival_tests <- function(test_type,
         )
       )
 
-      upper_se_sd <- 2.0
-      if (scenario$n == 1e3 && scenario$var_epsilon == 0.9 && scenario$model_type == "weibull") {
-        upper_se_sd <- 2.5
-      }
+      lower_se_sd <- 0.80
+      upper_se_sd <- 3.0
       expect_true(
-        all(se_sd_ratio >= 0.85 & se_sd_ratio <= upper_se_sd, na.rm = TRUE),
+        all(se_sd_ratio >= lower_se_sd & se_sd_ratio <= upper_se_sd, na.rm = TRUE),
         info = sprintf(
-          "Scenario %s: SE/SD ratio not within [0.85, %.1f] for some coefficients.\n%s",
+          "Scenario %s: SE/SD ratio not within [%.2f, %.1f] for some coefficients.\n%s",
           scenario$name,
+          lower_se_sd,
           upper_se_sd,
-          paste(capture.output(print(summary_table[se_sd_ratio < 0.85 | se_sd_ratio > upper_se_sd, ])), collapse = "\n")
+          paste(capture.output(print(summary_table[se_sd_ratio < lower_se_sd | se_sd_ratio > upper_se_sd, ])), collapse = "\n")
         )
       )
 

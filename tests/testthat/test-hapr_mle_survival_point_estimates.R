@@ -22,6 +22,7 @@ test_that("Survival MLE point estimates are within 4 SE", {
       var_epsilon = x$var_epsilon,
       model_type = x$model_type,
       log_k = x$log_k,
+      var_v_factor = x$var_v_factor,
       All_Within_4SE = x$all_within_4se,
       stringsAsFactors = FALSE
     )
@@ -49,7 +50,11 @@ test_that("Survival MLE runs without OpenMP", {
 
   beta_g <- 0.6
   beta_w <- c(0.1, -0.2, 0.15, 0.05)
-  theta <- c(0.0, 0.1, -0.25, 0.2)
+  theta <- normalize_theta(
+    theta = c(0.0, 0.1, -0.25, 0.2),
+    var_v = var_v,
+    var_epsilon = var_epsilon
+  )
 
   data <- mock_dataset_survival_exponential(
     n = n,

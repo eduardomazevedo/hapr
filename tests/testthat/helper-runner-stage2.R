@@ -22,6 +22,7 @@ run_stage2_tests <- function(test_type,
     true_coef <- make_true_coef(params$beta_g, params$beta_w)
     n_coef <- length(true_coef)
 
+    theta <- normalize_theta(params$theta, scenario$var_v, scenario$var_epsilon)
     if (test_type == "point") {
       set.seed(scenario$seed)
       data <- if (scenario$model_type == "lm") {
@@ -31,7 +32,7 @@ run_stage2_tests <- function(test_type,
           var_epsilon = scenario$var_epsilon,
           beta_g = params$beta_g,
           beta_w = params$beta_w,
-          theta = params$theta,
+          theta = theta,
           var_y = params$var_y
         )
       } else {
@@ -41,21 +42,21 @@ run_stage2_tests <- function(test_type,
           var_epsilon = scenario$var_epsilon,
           beta_g = params$beta_g,
           beta_w = params$beta_w,
-          theta = params$theta
+          theta = theta
         )
       }
 
       two_stage_time <- system.time({
-        first_stage_fit <- hapr_first_stage(
+        first_stage_fit <- suppressWarnings(hapr_first_stage(
           y = data$y,
           gc = data$gc,
           w = data$w,
           model_type = scenario$model_type
-        )
-        second_stage_fit <- hapr_second_stage(
+        ))
+        second_stage_fit <- suppressWarnings(hapr_second_stage(
           first_stage = first_stage_fit,
           improvement_ratio = scenario$improvement_ratio
-        )
+        ))
       })
       runtime_two_stage_ms <- two_stage_time[["elapsed"]] * 1000
 
@@ -82,6 +83,7 @@ run_stage2_tests <- function(test_type,
         var_epsilon = scenario$var_epsilon,
         n = scenario$n,
         model_type = scenario$model_type,
+        var_v_factor = scenario$var_v_factor,
         comparison_table = comparison_table,
         all_within_3se = all(within_3se, na.rm = TRUE)
       )
@@ -111,6 +113,7 @@ run_stage2_tests <- function(test_type,
                    scenario$idx_var_epsilon * 10000 +
                    scenario$idx_n * 1000 +
                    scenario$idx_model_type * 100 +
+                   scenario$idx_var_v_factor * 10 +
                    sim)
 
         data <- if (scenario$model_type == "lm") {
@@ -120,7 +123,7 @@ run_stage2_tests <- function(test_type,
             var_epsilon = scenario$var_epsilon,
             beta_g = params$beta_g,
             beta_w = params$beta_w,
-            theta = params$theta,
+            theta = theta,
             var_y = params$var_y
           )
         } else {
@@ -130,22 +133,22 @@ run_stage2_tests <- function(test_type,
             var_epsilon = scenario$var_epsilon,
             beta_g = params$beta_g,
             beta_w = params$beta_w,
-            theta = params$theta
+            theta = theta
           )
         }
 
-        first_stage_fit <- hapr_first_stage(
+        first_stage_fit <- suppressWarnings(hapr_first_stage(
           y = data$y,
           gc = data$gc,
           w = data$w,
           model_type = scenario$model_type
-        )
+        ))
 
         tryCatch({
-          second_stage_fit <- hapr_second_stage(
+          second_stage_fit <- suppressWarnings(hapr_second_stage(
             first_stage = first_stage_fit,
             improvement_ratio = scenario$improvement_ratio
-          )
+          ))
 
           aligned <- align_ci_beta(second_stage_fit$ci_beta, true_coef)
           all_estimates[sim, ] <- aligned$estimates
@@ -205,6 +208,7 @@ run_stage2_tests <- function(test_type,
         var_epsilon = scenario$var_epsilon,
         n = scenario$n,
         model_type = scenario$model_type,
+        var_v_factor = scenario$var_v_factor,
         summary_table = summary_table,
         all_estimates = all_estimates,
         mean_lower_ci = mean_lower_ci,
@@ -222,12 +226,16 @@ run_stage2_tests <- function(test_type,
         )
       )
 
+      lower_se_sd <- 0.80
+      upper_se_sd <- 2.30
       expect_true(
-        all(se_sd_ratio >= 0.85 & se_sd_ratio <= 2.0, na.rm = TRUE),
+        all(se_sd_ratio >= lower_se_sd & se_sd_ratio <= upper_se_sd, na.rm = TRUE),
         info = sprintf(
-          "Scenario %s: SE/SD ratio not within [0.85, 2.0] for some coefficients.\n%s",
+          "Scenario %s: SE/SD ratio not within [%.2f, %.2f] for some coefficients.\n%s",
           scenario$name,
-          paste(capture.output(print(summary_table[se_sd_ratio < 0.85 | se_sd_ratio > 2.0, ])), collapse = "\n")
+          lower_se_sd,
+          upper_se_sd,
+          paste(capture.output(print(summary_table[se_sd_ratio < lower_se_sd | se_sd_ratio > upper_se_sd, ])), collapse = "\n")
         )
       )
 

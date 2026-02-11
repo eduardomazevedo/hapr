@@ -27,6 +27,7 @@ test_that("Survival MLE coverage intervals are above 85%", {
       var_epsilon = x$var_epsilon,
       model_type = x$model_type,
       log_k = x$log_k,
+      var_v_factor = x$var_v_factor,
       Min_Coverage = min(x$coverage, na.rm = TRUE),
       Max_Coverage = max(x$coverage, na.rm = TRUE),
       Adjusted_Count = x$adjusted_count,

@@ -23,10 +23,17 @@ mock_dataset_lm <- function(
     e = rnorm(n, 0, sqrt(var_epsilon))
     v = rnorm(n, 0, sqrt(var_v))
 
-    # Normalize w so that var(theta %*% w) = 1 - var_v - var_epsilon
-    # Since w is standard Gaussian, var(theta'w) = theta'*theta = sum(theta^2)
-    w = w * sqrt((1 - var_v - var_epsilon) / sum(theta[-1]^2))
-    
+    # Since w is standard Gaussian, var(theta'w) = sum(theta^2) for theta without intercept
+    target_var <- 1 - var_v - var_epsilon
+    observed_var <- sum(theta[-1]^2)
+    if (!isTRUE(all.equal(observed_var, target_var, tolerance = 1e-8))) {
+        stop(sprintf(
+            "theta must satisfy var(theta'w) = 1 - var_v - var_epsilon. Got %.8f, expected %.8f.",
+            observed_var,
+            target_var
+        ))
+    }
+
     # Create w with intercept for internal calculations
     w_with_int <- cbind(1, w)
     

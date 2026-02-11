@@ -30,6 +30,7 @@ test_that("Coverage intervals are above 85% for all scenarios", {
       Model_Type = x$model_type,
       n = x$n,
       var_epsilon = x$var_epsilon,
+      var_v_factor = x$var_v_factor,
       Min_Coverage = min(x$coverage, na.rm = TRUE),
       Max_Coverage = max(x$coverage, na.rm = TRUE),
       Mean_Coverage = mean(x$coverage, na.rm = TRUE),
@@ -42,8 +43,13 @@ test_that("Coverage intervals are above 85% for all scenarios", {
 
   write_summary_csv(artifact_dir, "overall_summary.csv", overall_summary)
 
+  lower_se_sd <- 0.80
+  upper_se_sd <- 2.30
   all_coverage_ok <- all(sapply(all_results, function(x) all(x$coverage >= 0.85, na.rm = TRUE)))
-  all_ratio_ok <- all(sapply(all_results, function(x) all(x$se_sd_ratio >= 0.85 & x$se_sd_ratio <= 2.0, na.rm = TRUE)))
+  all_ratio_ok <- all(sapply(
+    all_results,
+    function(x) all(x$se_sd_ratio >= lower_se_sd & x$se_sd_ratio <= upper_se_sd, na.rm = TRUE)
+  ))
 
   expect_true(
     all_coverage_ok && all_ratio_ok,

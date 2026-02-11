@@ -21,6 +21,7 @@ test_that("Point estimates are within 3 SE of true coefficients for all scenario
       Model_Type = x$model_type,
       n = x$n,
       var_epsilon = x$var_epsilon,
+      var_v_factor = x$var_v_factor,
       All_Within_3SE = x$all_within_3se,
       stringsAsFactors = FALSE
     )
