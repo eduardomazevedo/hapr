@@ -19,14 +19,10 @@
 #' @param gc Polygenic risk score (numeric vector, will be normalized)
 #' @param w Control variables (numeric matrix, must not include constant or linearly dependent columns)
 #' @param model_type "lm", "probit", or "mle" (used internally by hapr_mle_survival)
-#' @param stage1_variance_method How to estimate stage-1 variance uncertainty for gc~w.
-#'   One of "scaled_gc" (default, enforces Var(gc)=1) or "ols" (classical OLS residual variance).
 #'
 #' @return A hapr_first_stage_fit object containing the results of the first stage.
 #' @export
-hapr_first_stage <- function(y, gc, w, model_type, stage1_variance_method = c("scaled_gc", "ols")) {
-  stage1_variance_method <- match.arg(stage1_variance_method)
-
+hapr_first_stage <- function(y, gc, w, model_type) {
   # Validate model_type
   if (!model_type %in% c("lm", "probit", "mle")) {
     stop("model_type must be one of: 'lm', 'probit', 'mle'")
@@ -119,15 +115,11 @@ hapr_first_stage <- function(y, gc, w, model_type, stage1_variance_method = c("s
   # Run regressions using low-level functions
   # Create design matrices with named intercept column
   gc_on_w_X <- add_intercept(w)
-  gc_on_w_fit <- if (stage1_variance_method == "scaled_gc") {
-    fit_lm_scaled_gc(
-      y = gc,
-      X = gc_on_w_X,
-      slope_idx = seq.int(2, ncol(gc_on_w_X))
-    )
-  } else {
-    fit_lm(gc, gc_on_w_X)
-  }
+  gc_on_w_fit <- fit_lm_scaled_gc(
+    y = gc,
+    X = gc_on_w_X,
+    slope_idx = seq.int(2, ncol(gc_on_w_X))
+  )
   if (model_type == "mle") {
     regressions <- list(
       gc_on_w = gc_on_w_fit
@@ -213,7 +205,6 @@ hapr_first_stage <- function(y, gc, w, model_type, stage1_variance_method = c("s
     parameters = parameters,
     vcov_parameters = vcov_parameters,
     stats = stats,
-    settings = list(stage1_variance_method = stage1_variance_method),
     preprocessed = list(y = y, gc = gc, w = w)
   )
   class(result) <- "hapr_first_stage_fit"

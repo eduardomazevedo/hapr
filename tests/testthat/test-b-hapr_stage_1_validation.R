@@ -206,20 +206,3 @@ test_that("hapr_first_stage returns joint stage-1 covariance for theta and varia
     tolerance = 1e-12
   )
 })
-
-test_that("hapr_first_stage supports both stage1_variance_method values", {
-  set.seed(4321)
-  n <- 100
-  w <- matrix(rnorm(n * 2), nrow = n, ncol = 2)
-  gc <- as.numeric(scale(0.3 * w[, 1] - 0.2 * w[, 2] + rnorm(n)))
-  y <- rnorm(n)
-
-  fit_scaled <- hapr_first_stage(y = y, gc = gc, w = w, model_type = "lm", stage1_variance_method = "scaled_gc")
-  fit_ols <- hapr_first_stage(y = y, gc = gc, w = w, model_type = "lm", stage1_variance_method = "ols")
-
-  expect_equal(fit_scaled$settings$stage1_variance_method, "scaled_gc")
-  expect_equal(fit_ols$settings$stage1_variance_method, "ols")
-  expect_true(is.null(fit_ols$vcov_parameters$joint_theta_var_v_plus_var_epsilon))
-  expect_true(is.numeric(fit_scaled$parameters$theta))
-  expect_true(is.numeric(fit_ols$parameters$theta))
-})

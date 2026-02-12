@@ -10,13 +10,11 @@
 #' @param w Control variables
 #' @param model_type Type of model to fit ("lm" or "probit")
 #' @param improvement_ratio The ratio of R-squared of the future fit to the current fit.
-#' @param stage1_variance_method How to estimate stage-1 variance uncertainty for gc~w.
-#'   One of "scaled_gc" (default) or "ols".
 #'
 #' @return A hapr_fit object.
 #' @export
-hapr <- function(y, gc, w, model_type, improvement_ratio, stage1_variance_method = c("scaled_gc", "ols")) {
-  first_stage <- hapr_first_stage(y, gc, w, model_type, stage1_variance_method = stage1_variance_method)
+hapr <- function(y, gc, w, model_type, improvement_ratio) {
+  first_stage <- hapr_first_stage(y, gc, w, model_type)
   second_stage <- hapr_second_stage(first_stage, improvement_ratio)
   second_stage
 }

@@ -16,8 +16,6 @@
 #'   for Weibull this should contain log_k.
 #' @param start_gamma_method Method for initializing gamma parameters.
 #'   One of "auto", "beta_transform", or "log_time_lm".
-#' @param stage1_variance_method How to estimate stage-1 variance uncertainty for gc~w.
-#'   One of "scaled_gc" (default) or "ols".
 #' @param use_openmp Logical; if TRUE uses OpenMP in the analytic gradient.
 #' @param control List passed to stats::optim
 #'
@@ -33,12 +31,10 @@ hapr_mle_survival <- function(
     start_beta = NULL,
     start_delta = NULL,
     start_gamma_method = c("auto", "beta_transform", "log_time_lm"),
-    stage1_variance_method = c("scaled_gc", "ols"),
     use_openmp = TRUE,
     control = list()) {
   model_type <- match.arg(model_type, c("exponential", "weibull"))
   start_gamma_method <- match.arg(start_gamma_method)
-  stage1_variance_method <- match.arg(stage1_variance_method)
   if (missing(improvement_ratio) || is.null(improvement_ratio)) {
     stop("improvement_ratio must be specified.")
   }
@@ -77,8 +73,7 @@ hapr_mle_survival <- function(
     y = event_time,
     gc = gc,
     w = w,
-    model_type = "mle",
-    stage1_variance_method = stage1_variance_method
+    model_type = "mle"
   )
 
   gc <- first_stage$preprocessed$gc
@@ -231,22 +226,18 @@ hapr_mle_survival <- function(
       standard_errors_gamma <- sqrt(diag(vcov_gamma))
       names(standard_errors_gamma) <- gamma_names
 
-      vcov_theta <- first_stage$vcov_parameters$theta
-      vcov_var_v_plus_var_epsilon <- first_stage$vcov_parameters$var_v_plus_var_epsilon
       joint_vcov_theta_var_total <- first_stage$vcov_parameters$joint_theta_var_v_plus_var_epsilon
+      if (is.null(joint_vcov_theta_var_total)) {
+        stop("Missing joint stage-1 covariance for (theta, var_v_plus_var_epsilon).")
+      }
 
       ng <- length(gamma_hat)
       nt <- length(theta_hat)
 
       vcov_full <- matrix(0, ng + nt + 1, ng + nt + 1)
       vcov_full[1:ng, 1:ng] <- vcov_gamma
-      if (!is.null(joint_vcov_theta_var_total)) {
-        idx_stage1 <- (ng + 1):(ng + nt + 1)
-        vcov_full[idx_stage1, idx_stage1] <- joint_vcov_theta_var_total
-      } else {
-        vcov_full[(ng + 1):(ng + nt), (ng + 1):(ng + nt)] <- vcov_theta
-        vcov_full[(ng + nt + 1), (ng + nt + 1)] <- vcov_var_v_plus_var_epsilon
-      }
+      idx_stage1 <- (ng + 1):(ng + nt + 1)
+      vcov_full[idx_stage1, idx_stage1] <- joint_vcov_theta_var_total
 
       J <- calculate_analytical_jacobian(
         model_type = "lm",
