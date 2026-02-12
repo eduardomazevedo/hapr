@@ -250,3 +250,30 @@ test_that("fit_probit handles edge case with single predictor", {
   expect_equal(fit_low$coefficients, coef(fit_std), tolerance = 1e-10)
   expect_equal(fit_low$vcov_coefficients, vcov(fit_std), tolerance = 1e-10)
 })
+
+test_that("fit_lm_scaled_gc returns constrained variance and joint covariance", {
+  set.seed(99)
+
+  n <- 200
+  w <- matrix(rnorm(n * 2), nrow = n, ncol = 2)
+  colnames(w) <- c("w1", "w2")
+  X <- cbind(`(Intercept)` = 1, w)
+
+  theta_true <- c(0.2, 0.35, -0.15)
+  gc_raw <- as.numeric(X %*% theta_true + rnorm(n, sd = 0.7))
+  gc <- as.numeric(scale(gc_raw))
+
+  fit <- hapr:::fit_lm_scaled_gc(y = gc, X = X, slope_idx = 2:3)
+
+  expect_true(fit$sigma_squared > 0 && fit$sigma_squared < 1)
+  expect_equal(fit$r2, 1 - fit$sigma_squared, tolerance = 1e-12)
+  expect_equal(
+    dim(fit$vcov_coefficients_sigma_squared),
+    c(length(fit$coefficients) + 1, length(fit$coefficients) + 1)
+  )
+  expect_equal(
+    fit$cov_coefficients_sigma_squared,
+    fit$vcov_coefficients_sigma_squared[seq_along(fit$coefficients), length(fit$coefficients) + 1],
+    tolerance = 1e-12
+  )
+})

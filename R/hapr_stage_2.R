@@ -46,6 +46,7 @@ hapr_second_stage <- function(
   vcov_gamma <- first_stage$vcov_parameters$gamma
   vcov_theta <- first_stage$vcov_parameters$theta
   vcov_var_v_plus_var_epsilon <- first_stage$vcov_parameters$var_v_plus_var_epsilon
+  joint_vcov_theta_var_total <- first_stage$vcov_parameters$joint_theta_var_v_plus_var_epsilon
 
   # Construct full covariance matrix of inputs
   # Order: [Gamma, Theta, Var_Total]
@@ -54,8 +55,13 @@ hapr_second_stage <- function(
   
   vcov_full <- matrix(0, ng + nt + 1, ng + nt + 1)
   vcov_full[1:ng, 1:ng] <- vcov_gamma
-  vcov_full[(ng + 1):(ng + nt), (ng + 1):(ng + nt)] <- vcov_theta
-  vcov_full[(ng + nt + 1), (ng + nt + 1)] <- vcov_var_v_plus_var_epsilon
+  if (!is.null(joint_vcov_theta_var_total)) {
+    idx_stage1 <- (ng + 1):(ng + nt + 1)
+    vcov_full[idx_stage1, idx_stage1] <- joint_vcov_theta_var_total
+  } else {
+    vcov_full[(ng + 1):(ng + nt), (ng + 1):(ng + nt)] <- vcov_theta
+    vcov_full[(ng + nt + 1), (ng + nt + 1)] <- vcov_var_v_plus_var_epsilon
+  }
 
   # Calculate Analytical Jacobian
   J <- calculate_analytical_jacobian(
