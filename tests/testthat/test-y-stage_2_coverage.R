@@ -1,6 +1,6 @@
 #' Test coverage intervals for hapr_second_stage across multiple scenarios
 #' 
-#' Runs 100 simulations per scenario and checks that coverage is above 85%
+#' Runs 1e3 simulations per scenario and checks that coverage is above 85%
 #' for all parameters. Tests the same scenarios as point estimate tests.
 #' Produces artifact tables.
 #' 
@@ -14,7 +14,7 @@ test_that("Coverage intervals are above 85% for all scenarios", {
   }
 
   params <- stage2_params_default()
-  scenarios <- stage2_scenarios(run_slow = TRUE, include_large_n = FALSE)
+  scenarios <- stage2_scenarios(run_slow = TRUE, include_large_n = TRUE)
   artifact_dir <- ensure_artifact_dir("coverage")
 
   all_results <- run_stage2_tests(
@@ -22,7 +22,7 @@ test_that("Coverage intervals are above 85% for all scenarios", {
     params = params,
     scenarios = scenarios,
     artifact_dir = artifact_dir,
-    n_simulations = 100
+    n_simulations = 1e3
   )
 
   overall_summary <- do.call(rbind, lapply(all_results, function(x) {

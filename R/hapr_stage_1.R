@@ -103,7 +103,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
   colnames(w) <- paste0("w", seq_len(ncol(w)))
   
   # Normalize gc (scale to mean 0, variance 1)
-  gc <- as.numeric(scale(gc))
+  # gc <- as.numeric(scale(gc))
   
   # Helper function to create design matrix with named intercept
   add_intercept <- function(X) {

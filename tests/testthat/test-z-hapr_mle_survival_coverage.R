@@ -10,7 +10,7 @@ test_that("Survival MLE coverage intervals are above 85%", {
   }
 
   params <- survival_params_default()
-  scenarios <- survival_scenarios(run_slow = TRUE, log_k_values = c(0), include_large_n = FALSE)
+  scenarios <- survival_scenarios(run_slow = TRUE, log_k_values = c(0), include_large_n = TRUE)
   artifact_dir <- ensure_artifact_dir("coverage_survival")
 
   all_results <- run_survival_tests(
@@ -18,7 +18,7 @@ test_that("Survival MLE coverage intervals are above 85%", {
     params = params,
     scenarios = scenarios,
     artifact_dir = artifact_dir,
-    n_simulations = 100
+    n_simulations = 1e3
   )
 
   summary_all <- do.call(rbind, lapply(all_results, function(x) {
