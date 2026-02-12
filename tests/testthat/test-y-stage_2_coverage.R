@@ -1,20 +1,20 @@
 #' Test coverage intervals for hapr_second_stage across multiple scenarios
 #' 
-#' Runs 1e3 simulations per scenario and checks that coverage is above 85%
-#' for all parameters. Tests the same scenarios as point estimate tests.
-#' Produces artifact tables.
+#' Runs 100 (or 1e3 if RUN_GIANT_TESTS is set) simulations per scenario and
+#' checks that coverage is above 85% for all parameters. Tests the same
+#' scenarios as point estimate tests. Produces artifact tables.
 #' 
-#' This test is slow and will only run if the environment variable
-#' RUN_SLOW_TESTS is set to "true" or "TRUE".
+#' This test is slow and will only run if RUN_SLOW_TESTS is set.
+#' Set RUN_GIANT_TESTS=true for n = 1e5 and 1e3 simulations.
 
 test_that("Coverage intervals are above 85% for all scenarios", {
   # Check if coverage tests should run
   if (!is_slow_enabled()) {
-    skip("Coverage tests skipped. Set RUN_SLOW_TESTS=true to run.")
+    skip("Coverage tests skipped. Set RUN_SLOW_TESTS=true or RUN_GIANT_TESTS=true to run.")
   }
 
   params <- stage2_params_default()
-  scenarios <- stage2_scenarios(run_slow = TRUE, include_large_n = TRUE)
+  scenarios <- stage2_scenarios(run_slow = TRUE, include_large_n = is_giant_enabled())
   artifact_dir <- ensure_artifact_dir("coverage")
 
   all_results <- run_stage2_tests(
@@ -22,7 +22,7 @@ test_that("Coverage intervals are above 85% for all scenarios", {
     params = params,
     scenarios = scenarios,
     artifact_dir = artifact_dir,
-    n_simulations = 1e3
+    n_simulations = if (is_giant_enabled()) 1e3 else 100
   )
 
   overall_summary <- do.call(rbind, lapply(all_results, function(x) {

@@ -60,6 +60,7 @@ Model-specific conversion formulas are in `calculate_parameters()` and `calculat
 - **Local test runs**: Prefer `devtools::test()` to ensure local sources are loaded
 - **Test artifacts**: Write generated outputs to `tests/testthat/_artifacts` using `testthat::test_path()`
 - **Slow tests**: Gate large `n` scenarios behind `RUN_SLOW_TESTS=true`
+- **Giant tests**: Gate n = 1e5 and 1e3 simulations in coverage tests behind `RUN_GIANT_TESTS=true` (requires `RUN_SLOW_TESTS` too)
 
 ## Theory References
 

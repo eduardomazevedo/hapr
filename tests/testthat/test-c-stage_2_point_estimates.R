@@ -6,7 +6,7 @@
 
 test_that("Point estimates are within 3 SE of true coefficients for all scenarios", {
   params <- stage2_params_default()
-  scenarios <- stage2_scenarios(is_slow_enabled(), include_large_n = TRUE)
+  scenarios <- stage2_scenarios(is_slow_enabled() || is_giant_enabled(), include_large_n = TRUE)
   artifact_dir <- ensure_artifact_dir("point_estimates")
 
   all_results <- run_stage2_tests(
