@@ -251,6 +251,45 @@ test_that("fit_probit handles edge case with single predictor", {
   expect_equal(fit_low$vcov_coefficients, vcov(fit_std), tolerance = 1e-10)
 })
 
+test_that("fit_probit R2 excludes intercept by name, not by column position", {
+  set.seed(123)
+
+  n <- 400
+  gc <- rnorm(n)
+  w1 <- rnorm(n)
+  w2 <- rnorm(n)
+  X_gc_first <- cbind(
+    gc = gc,
+    `(Intercept)` = 1,
+    w1 = w1,
+    w2 = w2
+  )
+
+  eta <- -0.3 + 0.5 * gc + 0.25 * w1 - 0.1 * w2
+  y <- rbinom(n, size = 1, prob = pnorm(eta))
+
+  fit_low <- hapr:::fit_probit(y = y, X = X_gc_first)
+
+  keep <- colnames(X_gc_first) != "(Intercept)"
+  eta_expected <- c(X_gc_first[, keep, drop = FALSE] %*% fit_low$coefficients[keep])
+  r2_expected <- var(eta_expected) / (var(eta_expected) + 1)
+
+  expect_equal(fit_low$r2, r2_expected, tolerance = 1e-10)
+})
+
+test_that("hapr_first_stage labels gc-only probit coefficient as gc", {
+  set.seed(123)
+
+  n <- 200
+  w <- cbind(w1 = rnorm(n), w2 = rnorm(n))
+  gc <- rnorm(n)
+  y <- as.logical(rbinom(n, size = 1, prob = pnorm(-0.2 + 0.4 * gc)))
+
+  fit <- hapr_first_stage(y = y, gc = gc, w = w, model_type = "probit")
+
+  expect_equal(names(fit$regressions$y_on_gc$coefficients), c("(Intercept)", "gc"))
+})
+
 test_that("fit_lm_scaled_gc returns constrained variance and joint covariance", {
   set.seed(99)
 

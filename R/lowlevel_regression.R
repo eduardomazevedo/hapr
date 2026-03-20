@@ -167,32 +167,10 @@ fit_probit <- function(y, X) {
   
   # 5. Calculate Liability-Scale R-squared
   # Formula: Var(Xb) / (Var(Xb) + 1)
-  # We isolate the linear predictor associated with predictors (excluding intercept)
-  # Check if first column is intercept (by name or by being constant)
-  has_intercept <- "(Intercept)" %in% coef_names || 
-                   (p > 0 && length(unique(X[, 1])) == 1)
-  
-  if (has_intercept && p > 1) {
-    # If intercept is present, remove it to calculate variance of explained part
-    beta_predictors <- coefficients[-1]
-    X_predictors <- X[, -1, drop = FALSE]
-    
-    if (length(beta_predictors) == 0) {
-      r2 <- 0
-    } else {
-      # Calculate variance of the linear predictor (X * beta)
-      # We can use var() directly on the vector
-      linear_predictor <- c(X_predictors %*% beta_predictors)
-      var_lp <- var(linear_predictor)
-      r2 <- var_lp / (var_lp + 1)
-    }
-  } else {
-    # If no intercept, all columns contribute to variance
-    # Note: R2 definition without intercept is tricky, but this standardizes latent variance
-    linear_predictor <- c(X %*% coefficients)
-    var_lp <- var(linear_predictor)
-    r2 <- var_lp / (var_lp + 1)
-  }
+  # This is invariant to the intercept because adding a constant does not change variance.
+  linear_predictor <- c(X %*% coefficients)
+  var_lp <- var(linear_predictor)
+  r2 <- var_lp / (var_lp + 1)
 
   list(
     coefficients = coefficients,

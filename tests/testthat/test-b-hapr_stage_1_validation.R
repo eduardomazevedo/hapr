@@ -206,3 +206,19 @@ test_that("hapr_first_stage returns joint stage-1 covariance for theta and varia
     tolerance = 1e-12
   )
 })
+
+test_that("hapr_first_stage probit R2 for gc_w includes gc when gc is first column", {
+  set.seed(123)
+
+  n <- 3000
+  w <- cbind(w1 = rnorm(n), w2 = rnorm(n))
+  gc <- 0.7 * w[, 1] + rnorm(n)
+  eta <- -0.2 + 0.45 * gc + 0.2 * w[, 1] - 0.1 * w[, 2]
+  y <- as.logical(rbinom(n, size = 1, prob = pnorm(eta)))
+
+  fit <- hapr_first_stage(y = y, gc = gc, w = w, model_type = "probit")
+
+  expect_equal(names(fit$regressions$y_on_gc$coefficients), c("(Intercept)", "gc"))
+  expect_equal(names(fit$regressions$y_on_gc_w$coefficients), c("gc", "(Intercept)", "w1", "w2"))
+  expect_gte(fit$regressions$y_on_gc_w$r2, fit$regressions$y_on_gc$r2)
+})

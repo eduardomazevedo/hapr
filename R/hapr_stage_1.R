@@ -135,7 +135,7 @@ hapr_first_stage <- function(y, gc, w, model_type) {
     }
     
     y_on_w_X <- add_intercept(w)
-    y_on_gc_X <- add_intercept(gc)
+    y_on_gc_X <- cbind(`(Intercept)` = 1, gc = gc)
     y_on_gc_w_X <- cbind(gc, add_intercept(w))
     colnames(y_on_gc_w_X)[1] <- "gc"
     
