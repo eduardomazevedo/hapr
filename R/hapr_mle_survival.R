@@ -17,12 +17,13 @@
 #' @param start_gamma_method Method for initializing gamma parameters.
 #'   One of "auto", "beta_transform", or "log_time_lm".
 #' @param use_openmp Logical; if TRUE uses OpenMP in the analytic gradient.
-#' @param cache_fn_gr Logical; if TRUE cache joint fn/gr evaluations when
-#'   `optim()` requests both at identical parameters.
 #' @param hessian_method How to compute the Hessian at the optimum.
 #'   One of `"gradient"` or `"optim"`. The gradient-based Hessian can change
-#'   standard errors slightly relative to `"optim"`.
-#' @param control List passed to stats::optim
+#'   standard errors slightly relative to `"optim"`. `"optim"` uses
+#'   `stats::nlm()`'s built-in Hessian.
+#' @param control List passed to `stats::nlm()`. Supported entries include
+#'   `maxit`, `gradtol`, `steptol`, `stepmax`, `ndigit`, `fscale`, `typsize`,
+#'   `print.level`, and `check.analyticals`.
 #'
 #' @return A hapr_mle_fit object with MLE estimates and diagnostics
 #' @export
@@ -37,7 +38,6 @@ hapr_mle_survival <- function(
     start_delta = NULL,
     start_gamma_method = c("auto", "beta_transform", "log_time_lm"),
     use_openmp = TRUE,
-    cache_fn_gr = TRUE,
     hessian_method = c("gradient", "optim"),
     control = list()) {
   model_type <- match.arg(model_type, c("exponential", "weibull"))
@@ -48,9 +48,6 @@ hapr_mle_survival <- function(
   }
   if (!is.logical(use_openmp) || length(use_openmp) != 1) {
     stop("use_openmp must be a single logical value.")
-  }
-  if (!is.logical(cache_fn_gr) || length(cache_fn_gr) != 1) {
-    stop("cache_fn_gr must be a single logical value.")
   }
   if (!is.null(start_beta) && !is.numeric(start_beta)) {
     stop("start_beta must be a numeric vector")
@@ -190,17 +187,48 @@ hapr_mle_survival <- function(
     X_w = X_w,
     posterior = posterior,
     model_type = model_type,
-    use_openmp = use_openmp,
-    cache_fn_gr = cache_fn_gr
+    use_openmp = use_openmp
   )
 
-  opt <- stats::optim(
-    par = start_params,
-    fn = neg_loglik$fn,
-    gr = neg_loglik$gr,
-    method = "BFGS",
-    control = control,
-    hessian = (hessian_method == "optim")
+  nlm_fn <- function(params) {
+    out <- neg_loglik$eval(params)
+    val <- out$value
+    attr(val, "gradient") <- out$gradient
+    val
+  }
+  nlm_control <- list(
+    f = nlm_fn,
+    p = start_params,
+    hessian = (hessian_method == "optim"),
+    iterlim = if (!is.null(control$maxit)) control$maxit else 100,
+    print.level = if (!is.null(control$print.level)) control$print.level else 0
+  )
+  control_map <- c(
+    gradtol = "gradtol",
+    steptol = "steptol",
+    stepmax = "stepmax",
+    ndigit = "ndigit",
+    fscale = "fscale",
+    typsize = "typsize",
+    print.level = "print.level",
+    check.analyticals = "check.analyticals"
+  )
+  for (nm in names(control_map)) {
+    if (!is.null(control[[nm]])) {
+      nlm_control[[control_map[[nm]]]] <- control[[nm]]
+    }
+  }
+  nlm_fit <- do.call(stats::nlm, nlm_control)
+  opt <- list(
+    par = nlm_fit$estimate,
+    value = nlm_fit$minimum,
+    counts = c(`function` = NA_integer_, gradient = NA_integer_),
+    convergence = if (nlm_fit$code <= 2) 0L else nlm_fit$code,
+    optimizer_code = nlm_fit$code,
+    optimizer_method = "nlm",
+    iterations = nlm_fit$iterations,
+    gradient = nlm_fit$gradient,
+    hessian = if (hessian_method == "optim") nlm_fit$hessian else NULL
   )
 
   if (hessian_method == "gradient") {

@@ -5,8 +5,7 @@ make_hapr_mle_likelihood_survival_grad <- function(
     X_w,
     posterior,
     model_type,
-    use_openmp = TRUE,
-    cache_fn_gr = FALSE) {
+    use_openmp = TRUE) {
   event_idx <- which(event_status == 1)
   censor_idx <- which(event_status == 0)
 
@@ -31,7 +30,7 @@ make_hapr_mle_likelihood_survival_grad <- function(
 
   post_c_over_a <- posterior$c / posterior$a
 
-  raw_nll_grad <- function(params) {
+  nll_grad <- function(params) {
     hapr_mle_survival_gamma_nll_split_grad_cpp(
       params = params,
       event_time = event_time_event,
@@ -44,20 +43,6 @@ make_hapr_mle_likelihood_survival_grad <- function(
       model_type = model_id,
       use_openmp = use_openmp
     )
-  }
-
-  nll_grad <- if (isTRUE(cache_fn_gr)) {
-    cache_params <- NULL
-    cache_result <- NULL
-    function(params) {
-      if (!identical(params, cache_params)) {
-        cache_result <<- raw_nll_grad(params)
-        cache_params <<- params
-      }
-      cache_result
-    }
-  } else {
-    raw_nll_grad
   }
 
   list(
