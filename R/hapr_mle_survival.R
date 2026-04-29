@@ -17,6 +17,11 @@
 #' @param start_gamma_method Method for initializing gamma parameters.
 #'   One of "auto", "beta_transform", or "log_time_lm".
 #' @param use_openmp Logical; if TRUE uses OpenMP in the analytic gradient.
+#' @param cache_fn_gr Logical; if TRUE cache joint fn/gr evaluations when
+#'   `optim()` requests both at identical parameters.
+#' @param hessian_method How to compute the Hessian at the optimum.
+#'   One of `"gradient"` or `"optim"`. The gradient-based Hessian can change
+#'   standard errors slightly relative to `"optim"`.
 #' @param control List passed to stats::optim
 #'
 #' @return A hapr_mle_fit object with MLE estimates and diagnostics
@@ -32,14 +37,20 @@ hapr_mle_survival <- function(
     start_delta = NULL,
     start_gamma_method = c("auto", "beta_transform", "log_time_lm"),
     use_openmp = TRUE,
+    cache_fn_gr = TRUE,
+    hessian_method = c("gradient", "optim"),
     control = list()) {
   model_type <- match.arg(model_type, c("exponential", "weibull"))
   start_gamma_method <- match.arg(start_gamma_method)
+  hessian_method <- match.arg(hessian_method)
   if (missing(improvement_ratio) || is.null(improvement_ratio)) {
     stop("improvement_ratio must be specified.")
   }
   if (!is.logical(use_openmp) || length(use_openmp) != 1) {
     stop("use_openmp must be a single logical value.")
+  }
+  if (!is.logical(cache_fn_gr) || length(cache_fn_gr) != 1) {
+    stop("cache_fn_gr must be a single logical value.")
   }
   if (!is.null(start_beta) && !is.numeric(start_beta)) {
     stop("start_beta must be a numeric vector")
@@ -179,7 +190,8 @@ hapr_mle_survival <- function(
     X_w = X_w,
     posterior = posterior,
     model_type = model_type,
-    use_openmp = use_openmp
+    use_openmp = use_openmp,
+    cache_fn_gr = cache_fn_gr
   )
 
   opt <- stats::optim(
@@ -188,8 +200,23 @@ hapr_mle_survival <- function(
     gr = neg_loglik$gr,
     method = "BFGS",
     control = control,
-    hessian = TRUE
+    hessian = (hessian_method == "optim")
   )
+
+  if (hessian_method == "gradient") {
+    np <- length(opt$par)
+    grad0 <- neg_loglik$gr(opt$par)
+    hessian <- matrix(0, np, np)
+    h_eps <- 1e-5
+    for (j in seq_len(np)) {
+      par_j <- opt$par
+      step <- h_eps * max(1, abs(par_j[j]))
+      par_j[j] <- par_j[j] + step
+      grad_j <- neg_loglik$gr(par_j)
+      hessian[, j] <- (grad_j - grad0) / step
+    }
+    opt$hessian <- 0.5 * (hessian + t(hessian))
+  }
 
   mle_params <- opt$par
   gamma_hat <- mle_params[seq_len(nb)]
